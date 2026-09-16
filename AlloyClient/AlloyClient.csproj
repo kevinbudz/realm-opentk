@@ -73,10 +73,17 @@
     </Target>
 
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+        <!-- SolutionDir is only set when building through AlloyTk.sln. When building
+             the project file directly (dotnet build AlloyClient/...) it expands to
+             the literal '*Undefined*', so fall back to a project-relative path. -->
+        <PropertyGroup>
+            <ContentBuilderDir Condition="'$(SolutionDir)' == '' Or $(SolutionDir.Contains('Undefined'))">$(MSBuildProjectDirectory)/../Alloy.ContentBuilder/bin/</ContentBuilderDir>
+            <ContentBuilderDir Condition="'$(ContentBuilderDir)' == ''">$(SolutionDir)Alloy.ContentBuilder/bin/</ContentBuilderDir>
+        </PropertyGroup>
         <Exec Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))"
               Command="&quot;$(SolutionDir)Alloy.ContentBuilder\bin\ContentBuilder.exe&quot; &quot;$(ProjectDir.TrimEnd('\'))&quot; &quot;$(TargetDir.TrimEnd('\'))&quot; &quot;Content&quot;" />
 
         <Exec Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))"
-              Command="&quot;$(SolutionDir)Alloy.ContentBuilder/bin/ContentBuilder&quot; &quot;$(ProjectDir)&quot; &quot;$(TargetDir)&quot; &quot;Content&quot;" />
+              Command="&quot;$(ContentBuilderDir)ContentBuilder&quot; &quot;$(ProjectDir)&quot; &quot;$(TargetDir)&quot; &quot;Content&quot;" />
     </Target>
 </Project>
