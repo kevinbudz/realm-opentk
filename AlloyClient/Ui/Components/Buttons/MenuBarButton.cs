@@ -3,6 +3,7 @@ using Alloy.UiLib;
 using Alloy.UiLib.BuiltIn;
 using Alloy.UiLib.Core;
 using OpenTK.Mathematics;
+using AlloyClient.Ui.Flash;
 
 namespace AlloyClient.Ui.Components.Buttons;
 
@@ -11,7 +12,7 @@ public sealed class MenuBarButton : TextButton {
     private const double PulsePeriodMs = 1800;
     private const float PulseAmplitude = 0.05f;
 
-    public MenuBarButton(string text, float size, Action callback, bool pulse = false) : base (new TextButtonConfig { Text = text, FontSize = size, OnClicked = callback, OutlineThickness = 4 }) {
+    public MenuBarButton(string text, float size, Action callback, bool pulse = false) : base (new TextButtonConfig { Text = text, FontSize = size, OnClicked = callback, DropShadow = FlashTextFilters.Soft }) {
         AddLineBox(size, FontType.Bold);
         AddPulse(pulse);
     }

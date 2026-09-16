@@ -2,6 +2,7 @@
 using AlloyClient.Ui;
 using Alloy.UiLib.BuiltIn;
 using Alloy.UiLib.Core;
+using AlloyClient.Ui.Flash;
 
 namespace AlloyClient.Game.Components.Hud;
 
@@ -65,17 +66,10 @@ public class StatusBar : Sprite {
         Text = text,
         FontSize = 14,
         FontType = FontType.Bold,
-        // White-on-saturated-bar text: use a same-color secondary with no halo.
-        // The previous black secondary mixed a gray fringe into glyph edges
-        // (mix(black,white,bodyAlpha)) which vanishes on dark/gray backgrounds
-        // but reads as dirt on red/green/blue — the "poor AA". Same-color gives
-        // clean white-fading edges like the slot numbers use. Flash's soft
-        // DropShadow isn't reproducible with this shader's hard MTSDF halo.
+        DropShadow = FlashTextFilters.Default,
         X = 1,
         Y = 1,
-        OutlineThickness = 0,
-        Color = 0xFFFFFF,
-        OutlineColor = 0xFFFFFF
+        Color = 0xFFFFFF
     });
 
     private void UpdateText(int val, int max, int boost, int baseMax, int level) {

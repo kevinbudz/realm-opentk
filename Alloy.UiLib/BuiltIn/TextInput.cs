@@ -4,6 +4,7 @@ using System.Text;
 using Alloy.UiLib.Core;
 using Alloy.UiLib.Data;
 using Alloy.UiLib.Rendering;
+using Alloy.UiLib.Extra;
 using OpenTK.Mathematics;
 using OpenTK.Platform;
 
@@ -17,6 +18,7 @@ public struct InputConfig {
     public uint Color = 0xFFFFFF;
     public uint OutlineColor = 0x0;
     public uint OutlineThickness = 4;
+    public DropShadowFilter DropShadow = null;
     public int Width = 100;
     public string DefaultText = "";
     public byte MaxCharacters = byte.MaxValue;
@@ -33,6 +35,12 @@ public struct InputConfig {
 }
 
 public sealed class TextInput : Sprite, ITextInputTarget, IManualTextInputTarget {
+
+    /// <summary>Filters the visible text only, excluding the caret and box.</summary>
+    public DropShadowFilter DropShadow {
+        get => TextFilter;
+        set => TextFilter = value;
+    }
 
     public const string BoxLookup = "textBox";
 
@@ -80,6 +88,7 @@ public sealed class TextInput : Sprite, ITextInputTarget, IManualTextInputTarget
         Y = config.Y;
         _fontScale = config.FontSize;
         _font = UiRender.GetFont(config.FontType);
+        DropShadow = config.DropShadow;
         SetColor(config.Color);
         SetColorSecondary(config.OutlineColor);
         _outlineThickness = _font.ValidateOutlineSize(config.OutlineThickness);
@@ -190,9 +199,9 @@ public sealed class TextInput : Sprite, ITextInputTarget, IManualTextInputTarget
         var (start, end) = _font.GetStartIndex(_inputText, _caretIndex, _width - startX * 2 - _caret.Width, _outlineThickness, _fontScale);
         _startIndex = start;
         _endIndex = end;
-        OverridePrimCount = 2;
+        OverridePrimCount = 0;
 
-        var idx = 4;
+        var idx = 0;
         var len = _inputText.Length;
         var caret = false;
 

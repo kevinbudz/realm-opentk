@@ -6,6 +6,7 @@ using AlloyClient.Display;
 using AlloyClient.Game.Components;
 using AlloyClient.Game.Components.Options;
 using AlloyClient.Ui.Components.Buttons;
+using AlloyClient.Ui.Flash;
 
 namespace AlloyClient.Game.Components.Hud;
 
@@ -31,8 +32,7 @@ public sealed class CharacterDetails : Sprite {
             X = 37,
             Y = 3,
             Color = 0xB3B3B3,
-            OutlineThickness = 1,
-            OutlineColor = 0
+            DropShadow = FlashTextFilters.Default
         });
         AddChild(_name);
 

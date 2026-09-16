@@ -1,6 +1,7 @@
 ﻿using System;
 using Alloy.UiLib.BuiltIn;
 using Alloy.UiLib.Core;
+using Alloy.UiLib.Extra;
 
 namespace AlloyClient.Ui.Components.Buttons;
 
@@ -17,6 +18,7 @@ public struct TextButtonConfig {
     public float Alpha = 1.0f;
     public uint OutlineColor = 0x0;
     public float OutlineThickness = 0;
+    public DropShadowFilter DropShadow = null;
     public UiAnchor Anchor = UiAnchor.LeftTop;
 
     public TextButtonConfig() { }
@@ -40,7 +42,7 @@ public class TextButton : Sprite {
         _activeColor = config.ActiveColor;
         _onHoverColor = config.HoverColor;
         _inactive = config.InactiveColor;
-        _text = new SimpleText(new TextConfig {Text = config.Text, FontSize = config.FontSize, FontType = config.FontType, Color = _activeColor, OutlineColor = config.OutlineColor, OutlineThickness = config.OutlineThickness});
+        _text = new SimpleText(new TextConfig {Text = config.Text, FontSize = config.FontSize, FontType = config.FontType, Color = _activeColor, OutlineColor = config.OutlineColor, OutlineThickness = config.OutlineThickness, DropShadow = config.DropShadow});
         _onClicked = config.OnClicked;
 
         X = config.X;

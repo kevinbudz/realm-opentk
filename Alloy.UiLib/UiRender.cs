@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Alloy.Common.SourceGen;
 using Alloy.Engine.Graphics;
 using Alloy.Engine.Diagnostics;
@@ -90,6 +90,7 @@ public static partial class UiRender {
     }
 
     public static void RegisterFont(BitmapFamily font) {
+        TextFilterRender.Dispose();
         MyriadPro = font;
 
         UiShader.SetValue("PixelRange", MyriadPro.PixelRange);
@@ -99,6 +100,7 @@ public static partial class UiRender {
 
     public static void Dispose() {
         Toolkit.Event.EventRaised -= HandleEvents;
+        TextFilterRender.Dispose();
         SpriteRender.Dispose();
         UiShader?.Dispose();
         GpuDraw?.Dispose();

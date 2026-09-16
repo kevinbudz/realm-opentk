@@ -2,6 +2,7 @@
 using Alloy.UiLib.Core;
 using Alloy.UiLib.Data;
 using Alloy.UiLib.Rendering;
+using Alloy.UiLib.Extra;
 using OpenTK.Mathematics;
 
 namespace Alloy.UiLib.BuiltIn;
@@ -16,6 +17,8 @@ public struct TextConfig {
     public float OutlineThickness = 0;
     public uint Color = 0xFFFFFF;
     public uint OutlineColor = 0x0;
+    /// <summary>Optional whole-text filter; takes precedence over the legacy outline.</summary>
+    public DropShadowFilter DropShadow = null;
     public float Alpha = 1.0f;
     public UiAnchor Anchor = UiAnchor.LeftTop;
 
@@ -32,6 +35,11 @@ public sealed class SimpleText : Sprite {
 
     public string Text;
 
+    public DropShadowFilter DropShadow {
+        get => TextFilter;
+        set => TextFilter = value;
+    }
+
     private float _fontScale;
     private float _outlineThickness;
     private float _lineWrapStart;
@@ -46,6 +54,7 @@ public sealed class SimpleText : Sprite {
         X = config.X;
         Y = config.Y;
         Alpha = config.Alpha;
+        DropShadow = config.DropShadow;
         _outlineThickness = _font.ValidateOutlineSize(config.OutlineThickness);
         SetColor(config.Color);
         SetColorSecondary(config.OutlineColor);
@@ -77,7 +86,9 @@ public sealed class SimpleText : Sprite {
     private void FillData() {
         var scale = _fontScale;
         var zero = new Vector2(0f, _font.Ascender * scale);
-        var lastSpaceIndex = 0;
+        var lastSpaceIndex = -1;
+        var lastSpaceGlyphCount = 0;
+        var lastSpaceWidth = 0f;
         var boundWidth = 0f;
         var len = Text.Length;
         var lineCount = len == 0 ? 0 : 1;
@@ -87,6 +98,8 @@ public sealed class SimpleText : Sprite {
             if (c == ' ') {
                 // Track last space
                 lastSpaceIndex = i;
+                lastSpaceGlyphCount = idx;
+                lastSpaceWidth = zero.X;
             }
 
             switch (c) {
@@ -97,6 +110,7 @@ public sealed class SimpleText : Sprite {
 
                     zero.X = _lineWrapStart;
                     zero.Y += _font.LineHeight * scale;
+                    lastSpaceIndex = -1;
                     lineCount++;
                     continue;
                 case '\r':
@@ -135,10 +149,11 @@ public sealed class SimpleText : Sprite {
             // Max width hit, start new line
             if (_maxWidth > -1 && zero.X >= _maxWidth && i < len - 1) {
                 // Prevent word being cut by the new line if there was
-                if (lastSpaceIndex > 0) {
-                    idx -= i - lastSpaceIndex;
+                if (lastSpaceIndex >= 0) {
+                    idx = lastSpaceGlyphCount;
+                    zero.X = lastSpaceWidth;
                     i = lastSpaceIndex;
-                    lastSpaceIndex = 0;
+                    lastSpaceIndex = -1;
                 }
 
                 if (zero.X > boundWidth) {
@@ -155,6 +170,10 @@ public sealed class SimpleText : Sprite {
             boundWidth = zero.X;
         }
 
+        // Wrapped spaces and unsupported characters need not emit a quad. Draw
+        // only the geometry actually written, including after shrinking text.
+        OverridePrimCount = idx * 2;
+        Array.Clear(VertexData, idx * 4, VertexData.Length - idx * 4);
         SetGraphicsBuffer();
 
         var measuredWidth = _maxWidth < 0 ? boundWidth : Math.Min(boundWidth, _maxWidth);

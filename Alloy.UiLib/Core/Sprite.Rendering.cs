@@ -1,5 +1,6 @@
 ﻿using System;
 using Alloy.UiLib.Rendering;
+using Alloy.UiLib.Extra;
 using OpenTK.Mathematics;
 
 namespace Alloy.UiLib.Core;
@@ -8,12 +9,18 @@ public partial class Sprite {
 
     private bool _noRenderData = true;
 
+    // Only text components expose this. Geometry revisions invalidate the cached
+    // alpha mask; moving, fading, or recoloring a label can reuse it.
+    protected DropShadowFilter TextFilter;
+    private int _graphicsRevision;
+
     /// <summary>
     /// Internal workings assumes vertex data has (0,0) in top left and (w,h) in bottom right,
     /// If you don't start at (0,0) width and height calculations will be off
     /// </summary>
     /// <exception cref="Exception">throws if data is incomplete to form 1 primitive</exception>
     protected void SetGraphicsBuffer() {
+        _graphicsRevision++;
         if (Indices?.Length is > 0 and < 3) {
             throw new Exception("Primitives require at least 3 indices");
         }
@@ -76,7 +83,12 @@ public partial class Sprite {
 
         var iCount = OverridePrimCount > 0 ? OverridePrimCount * 3 : Indices.Length;
 
-        SpriteRender.Draw(instance, Indices.AsSpan(0, iCount), VertexData.AsSpan());
+        if (TextFilter is not null && TextureId == TextureType.Text) {
+            TextFilterRender.Draw(this, _graphicsRevision, TextFilter, instance,
+                Indices.AsSpan(0, iCount), VertexData.AsSpan());
+        } else {
+            SpriteRender.Draw(instance, Indices.AsSpan(0, iCount), VertexData.AsSpan());
+        }
 
         UiRender.LastRenderCount++;
     }

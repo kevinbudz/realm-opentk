@@ -1,4 +1,5 @@
 using Alloy.UiLib.Core;
+using Alloy.UiLib.Extra;
 
 namespace AlloyClient.Ui.Flash;
 
@@ -15,7 +16,15 @@ public readonly record struct FlashTextStyle(
     float FontSize,
     uint Color,
     float OutlineThickness = 0,
-    uint OutlineColor = 0);
+    uint OutlineColor = 0,
+    DropShadowFilter DropShadow = null);
+
+/// <summary>Shared filter values from the original ActionScript text call sites.</summary>
+public static class FlashTextFilters {
+    public static DropShadowFilter Default { get; } = new(distance: 0, angle: 0);
+    public static DropShadowFilter StrongOutline { get; } = new(distance: 0, angle: 0, strength: 2);
+    public static DropShadowFilter Soft { get; } = new(distance: 0, angle: 0, alpha: 0.5f, blurX: 12, blurY: 12);
+}
 
 /// <summary>
 /// Color tokens copied from the Flash client's shared text formats.
@@ -102,13 +111,13 @@ public static class FlashTextStyles {
     public static FlashTextStyle ChatGuild { get; } = ChatNormal with { Color = FlashUiTokens.ChatGuild };
 
     /// <summary>HUD status-bar labels and values (bold 14-point white text).</summary>
-    public static FlashTextStyle HudValue { get; } = new(FontType.Bold, 14, FlashUiTokens.TextPrimary);
+    public static FlashTextStyle HudValue { get; } = new(FontType.Bold, 14, FlashUiTokens.TextPrimary, DropShadow: FlashTextFilters.Default);
 
     /// <summary>Title-screen primary action text.</summary>
-    public static FlashTextStyle TitlePrimaryAction { get; } = new(FontType.Bold, 36, FlashUiTokens.TextPrimary);
+    public static FlashTextStyle TitlePrimaryAction { get; } = new(FontType.Bold, 36, FlashUiTokens.TextPrimary, DropShadow: FlashTextFilters.Soft);
 
     /// <summary>Title-screen secondary action text.</summary>
-    public static FlashTextStyle TitleAction { get; } = new(FontType.Bold, 22, FlashUiTokens.TextPrimary);
+    public static FlashTextStyle TitleAction { get; } = new(FontType.Bold, 22, FlashUiTokens.TextPrimary, DropShadow: FlashTextFilters.Soft);
 
     /// <summary>Tooltip title text.</summary>
     public static FlashTextStyle TooltipTitle { get; } = new(FontType.Bold, 20, FlashUiTokens.TextPrimary);

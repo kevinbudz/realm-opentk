@@ -5,6 +5,7 @@ using AlloyClient.Game.Objects;
 using AlloyClient.Networking;
 using AlloyClient.Networking.Packets.Outgoing;
 using AlloyClient.Ui;
+using AlloyClient.Ui.Flash;
 using AlloyClient.Utils;
 
 namespace AlloyClient.Game.Components.Hud.Inventory;
@@ -96,8 +97,7 @@ public sealed class PotionInventory : Sprite {
                 X = ButtonWidth / 2 + 6,
                 Y = 6,
                 Color = 0xAAAAAA,
-                OutlineThickness = 0.5f,
-                OutlineColor = 0
+                DropShadow = FlashTextFilters.StrongOutline
             });
             AddChild(_countText);
 

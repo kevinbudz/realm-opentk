@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Buffers;
 using Alloy.Engine.Graphics;
 using Alloy.Engine.Graphics.Buffers;
 using Alloy.Engine.Diagnostics;
@@ -60,6 +61,26 @@ public static class SpriteRender {
     }
 
     internal static void Draw(SpriteInstanceData data, ReadOnlySpan<ushort> indices, ReadOnlySpan<VertexUi> vertices) {
+        if (indices.IsEmpty || vertices.IsEmpty) return;
+        if (indices.Length > IndexBufferSize || vertices.Length > VertexBufferSize) {
+            // Very long text can exceed a batch by itself. Expand triangle vertices
+            // into bounded chunks so arbitrary index layouts remain valid.
+            const int chunkCapacity = VertexBufferSize / 3 * 3;
+            var chunkVertices = ArrayPool<VertexUi>.Shared.Rent(chunkCapacity);
+            var chunkIndices = ArrayPool<ushort>.Shared.Rent(chunkCapacity);
+            try {
+                for (var i = 0; i < chunkCapacity; i++) chunkIndices[i] = (ushort)i;
+                for (var start = 0; start < indices.Length; start += chunkCapacity) {
+                    var count = Math.Min(chunkCapacity, indices.Length - start);
+                    for (var i = 0; i < count; i++) chunkVertices[i] = vertices[indices[start + i]];
+                    Draw(data, chunkIndices.AsSpan(0, count), chunkVertices.AsSpan(0, count));
+                }
+            } finally {
+                ArrayPool<VertexUi>.Shared.Return(chunkVertices);
+                ArrayPool<ushort>.Shared.Return(chunkIndices);
+            }
+            return;
+        }
         if (_instanceCount + 1 > InstanceBufferSize
             || _indexCount + indices.Length > IndexBufferSize
             || _vertexCount + vertices.Length > VertexBufferSize) {
@@ -101,7 +122,7 @@ public static class SpriteRender {
         _instanceBuffer?.Dispose();
     }
 
-    private static void Flush() {
+    internal static void Flush() {
         if (_indexCount == 0) {
             _instanceCount = 0;
             _vertexCount = 0;

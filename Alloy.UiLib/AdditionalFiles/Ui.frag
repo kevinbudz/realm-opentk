@@ -1,4 +1,4 @@
-﻿#version 330
+#version 450 core
 
 in VS_OUT {
     vec4 Position1;
@@ -22,6 +22,9 @@ uniform sampler2D MinimapTexture;
 uniform float PixelRange;
 uniform vec2 TextTextureSize;
 uniform sampler2D TextTexture;
+// Reserved for the cached, whole-text filter renderer.
+layout(binding = 14) uniform sampler2D TextBodyMask;
+layout(binding = 15) uniform sampler2D TextShadowMask;
 
 uniform sampler2D TitleBackgroundTexture;
 uniform sampler2D TitleGraphicTexture;
@@ -121,9 +124,52 @@ vec4 RenderText() {
         glowAlpha = glowDist * glowSize;
     }
 
+    if (inp.Extra2.w == 1.0) return vec4(bodyAlpha);
+
     vec4 color = mix(unpackColor(inp.Override), unpackColor(inp.Color), bodyAlpha);
     float alpha = bodyAlpha + glowAlpha;
     return vec4(color.rgb, alpha);
+}
+
+// Fractional box radius, repeated by the renderer for the requested quality.
+vec4 BlurTextMask() {
+    float radius = inp.Extra1.z;
+    int reach = int(ceil(radius));
+    float sum = 0.0;
+    float weightSum = 0.0;
+    for (int i = -reach; i <= reach; ++i) {
+        float weight = clamp(radius + 1.0 - abs(float(i)), 0.0, 1.0);
+        vec2 uv = inp.UVCoords + float(i) * inp.Extra1.xy;
+        float value = 0.0;
+        if (all(greaterThanEqual(uv, vec2(0))) && all(lessThanEqual(uv, vec2(1))))
+            value = texture(TextShadowMask, uv).r;
+        sum += weight * value;
+        weightSum += weight;
+    }
+    return vec4(sum / weightSum);
+}
+
+vec4 FilteredText() {
+    vec4 bodyColor = unpackColor(inp.Color);
+    vec4 shadowColor = unpackColor(inp.Override);
+    float body = texture(TextBodyMask, inp.UVCoords).r * bodyColor.a;
+    vec2 uv = inp.UVCoords - inp.Extra1.xy;
+    float shifted = 0.0;
+    if (all(greaterThanEqual(uv, vec2(0))) && all(lessThanEqual(uv, vec2(1))))
+        shifted = texture(TextShadowMask, uv).r * bodyColor.a;
+    bool inner = inp.Extra2.x > 0.0;
+    bool knockout = inp.Extra2.y > 0.0;
+    bool hideObject = inp.Extra2.z > 0.0;
+    float effect = clamp((inner ? 1.0 - shifted : shifted) * inp.Extra1.z * inp.Extra1.w, 0.0, 1.0);
+    if (inner) effect *= body;
+    else if (knockout) effect *= 1.0 - body;
+    if (hideObject || knockout) return vec4(shadowColor.rgb, effect);
+    // Compose in premultiplied space, then return straight alpha to the UI blend state.
+    float alpha = inner ? body : body + effect * (1.0 - body);
+    vec3 rgb = inner
+        ? bodyColor.rgb * (body - effect) + shadowColor.rgb * effect
+        : bodyColor.rgb * body + shadowColor.rgb * effect * (1.0 - body);
+    return vec4(alpha > 0.0 ? rgb / alpha : vec3(0), alpha);
 }
 
 float samp(vec2 uv, vec2 dx, vec2 dy) {
@@ -250,7 +296,7 @@ void main() {
 
 
     //TODO: replace pos1 with gl_FragCoord and send screen coords in scissor instead
-    if (inp.Position1.x < inp.Scissor.x || inp.Position1.x > inp.Scissor.z || inp.Position1.y < inp.Scissor.w || inp.Position1.y > inp.Scissor.y) {
+    if (!(inp.Extra2.w == 1.0 && (inp.Info.x == IdText || inp.Info.x == 11.0)) && (inp.Position1.x < inp.Scissor.x || inp.Position1.x > inp.Scissor.z || inp.Position1.y < inp.Scissor.w || inp.Position1.y > inp.Scissor.y)) {
         discard;
     }
 
@@ -258,7 +304,11 @@ void main() {
 
     float type = inp.Info.x;
 
-    if (type == IdColor) {
+    if (type == 10.0) {
+        pixel = FilteredText();
+    } else if (type == 11.0) {
+        pixel = BlurTextMask();
+    } else if (type == IdColor) {
         pixel = color;
     } else if (type == IdGameAtlas) {
         pixel = RenderOutline();
@@ -280,7 +330,7 @@ void main() {
         pixel = RenderEllipse();
     }
 
-    if (color.a > 0 && type != IdColor && type != IdText && type != IdEllipse)
+    if (color.a > 0 && type != IdColor && type != IdText && type != IdEllipse && type != 10.0 && type != 11.0)
     pixel *= color;
 
     vec4 add = floor(inp.ColorTransform / 1000.0);
