@@ -89,9 +89,12 @@ public sealed class GameScreen : Screen {
         var width = args.Width;
         var height = args.Height;
 
-        _hud.X = width;
-        _hud.Y = height / 2;
+        // The Flash HUD is a 200x600 design-space panel anchored to the
+        // viewport's top-right edge.  Keep its logical coordinates in the
+        // 800x600 design space while placing the scaled panel in window units.
         _hud.Scale = Stage.ScreenScale;
+        _hud.X = width - (int)(HudView.HudWidth * Stage.ScreenScale.X);
+        _hud.Y = 0;
 
         _chat.X = 0;
         _chat.Y = height;

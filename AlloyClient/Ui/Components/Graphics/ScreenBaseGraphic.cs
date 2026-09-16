@@ -6,7 +6,11 @@ using OpenTK.Mathematics;
 namespace AlloyClient.Ui.Components.Graphics;
 
 public sealed class ScreenGraphic : UiElement {
-    
+    // Flash LayoutHelper/ScaledScreen design space. The title textures are
+    // retained at their native 1280x720 resolution, then centered and
+    // height-scaled into the 800x600 client viewport.
+    private const int DesignWidth = 800;
+    private const int DesignHeight = 600;
     private const int TexWidth = 1280;
     private const int TexHeight = 720;
 
@@ -19,16 +23,19 @@ public sealed class ScreenGraphic : UiElement {
     }
 
     protected override void OnResize(ResizeEvent args) {
-        var x = (float)args.Width / TexWidth;
-        var y = (float)args.Height / TexHeight;
+        // LayoutHelper.scaleForHeight(stageHeight), with the same fallback
+        // for a transient zero-sized stage. Width can require additional
+        // cover scaling because this is a full-window backdrop, while menu
+        // content continues to use the height-derived Stage.ScreenScale.
+        var heightScale = args.Height > 0 ? (float)args.Height / DesignHeight : 1f;
+        var widthScale = args.Width > 0 ? (float)args.Width / TexWidth : 0f;
+        var scale = MathF.Max(heightScale, widthScale);
 
-        var scale = MathF.Max(x, y);
+        var w = Math.Max(1, (int)MathF.Ceiling(TexWidth * scale));
+        var h = Math.Max(1, (int)MathF.Ceiling(TexHeight * scale));
 
-        var w = (int)(TexWidth * scale);
-        var h = (int)(TexHeight * scale);
-
-        X = (w - Stage.StageWidth) / -2;
-        Y = (h - Stage.StageHeight) / -2;
+        X = (args.Width - w) / 2;
+        Y = (args.Height - h) / 2;
         
         FillData(w, h);
     }

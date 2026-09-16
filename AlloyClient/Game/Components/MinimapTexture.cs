@@ -26,8 +26,11 @@ public static class MinimapTexture {
     }
     
     public static void ClearData() {
+        // Flash MiniMap fills its 192x192 background with 0x1B1B1B (1776411)
+        // before drawing ground tiles.
+        var bg = Color.FromHexRGB(0x1B1B1B);
         for (var i = 0; i < _data.Length; i++) {
-            _data[i] = Color.Black;
+            _data[i] = bg;
         }
 
         _texture.SetData(_data, 4096, 4096);

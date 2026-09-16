@@ -4,21 +4,22 @@ namespace AlloyClient.Game.Components.Hud;
 
 public class CharacterBars : Sprite {
 
-    public int height = 20;
+    // Flash StatMetersView uses 176x16 bars with 8px gaps between rows.
+    public int height = 16;
     public int offset = 8;
+
+    private const int BarWidth = 176;
 
     private readonly StatusBar _expBar;
     private readonly StatusBar _fameBar;
     private readonly StatusBar _hpBar;
     private readonly StatusBar _mpBar;
 
-    private int _lastPlayerLevel;
-
     public CharacterBars() {
-        _expBar = new StatusBar(210, height, 5931045, 5526612, 0xFFFFFF, "Lvl X");
-        _fameBar = new StatusBar(210, height, 14835456, 5526612, 0xFFFFFF, "Fame");
-        _hpBar = new StatusBar(210, height, 14693428, 5526612, 0xFFFFFF, "HP");
-        _mpBar = new StatusBar(210, height, 6325472, 5526612, 0xFFFFFF, "MP");
+        _expBar = new StatusBar(BarWidth, height, 5931045, 5526612, 0xFFFFFF, "Lvl X");
+        _fameBar = new StatusBar(BarWidth, height, 14835456, 5526612, 0xFFFFFF, "Fame");
+        _hpBar = new StatusBar(BarWidth, height, 14693428, 5526612, 0xFFFFFF, "HP");
+        _mpBar = new StatusBar(BarWidth, height, 6325472, 5526612, 0xFFFFFF, "MP");
         _fameBar.Visible = false;
         AddChild(_hpBar);
         AddChild(_mpBar);
@@ -28,39 +29,38 @@ public class CharacterBars : Sprite {
     }
 
     private void SetPositions() {
-        _fameBar.Y = height  * 0 + offset * 0; 
-        _expBar.Y = height  * 0 + offset * 0; 
-        _hpBar.Y = height * 1 + offset * 1; 
-        _mpBar.Y = height * 2 + offset * 2;
+        _fameBar.Y = 0;
+        _expBar.Y = 0;
+        _hpBar.Y = height + offset;
+        _mpBar.Y = (height + offset) * 2;
     }
 
     public void Update() {
         var player = Map.LocalPlayer;
 
-        if (!_fameBar.Visible && player.Level == 20) {
-            DisableExpBar();
+        var levelText = $"Lvl {player.Level}";
+        if (_expBar.labelString != levelText) {
+            _expBar.UpdateLabel(levelText);
         }
 
-        if (_expBar.Visible) {
-            if (player.Level != _lastPlayerLevel) {
-                _lastPlayerLevel = player.Level;
-                _expBar.UpdateLabel($"Lvl {player.Level}");
+        if (player.Level != 20) {
+            if (!_expBar.Visible) {
+                _expBar.Visible = true;
+                _fameBar.Visible = false;
             }
-            
+
             _expBar.Update(player.Experience, player.NextLevelExp);
         }
+        else {
+            if (!_fameBar.Visible) {
+                _fameBar.Visible = true;
+                _expBar.Visible = false;
+            }
 
-        if(_fameBar.Visible) {
-            _expBar.Update(player.CurrentFame, player.FameGoal);
+            _fameBar.Update(player.CurrentFame, player.FameGoal);
         }
 
-        _hpBar.Update(player.Hp, player.MaxHp, player.MaxHpBoost, 250, player.Level);
-        _mpBar.Update(player.Mp, player.MaxMp, player.MaxMpBoost, 250, player.Level);
-    }
-    
-    private void DisableExpBar()
-    {
-        _expBar.Visible = false;
-        _fameBar.Visible = true;
+        _hpBar.Update(player.Hp, player.MaxHp, player.MaxHpBoost, player.Properties.PlayerProperties.MaxHp, player.Level);
+        _mpBar.Update(player.Mp, player.MaxMp, player.MaxMpBoost, player.Properties.PlayerProperties.MaxMp, player.Level);
     }
 }

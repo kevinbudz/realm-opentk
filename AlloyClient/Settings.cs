@@ -22,6 +22,7 @@ public static class Settings {
     private const string LocalFolderName = "AlloyClient";
     private const string AccountFileName = "account.xml";
     private const string SettingsFileName = "settings.xml";
+    private const int NativeWindowSettingsVersion = 1;
 
     private readonly static string AccountFilePath;
     private readonly static string SettingsFilePath;
@@ -41,8 +42,10 @@ public static class Settings {
     public const string GameServerAddress = "127.0.0.1";
     public const ushort GameServerPort = 2050;
 
-    public const int DefaultScreenWidth = 1280;
-    public const int DefaultScreenHeight = 720;
+    // Flash's native design and window resolution. Menus and HUD coordinates
+    // are authored in this 800x600 space and scale from the window height.
+    public const int DefaultScreenWidth = 800;
+    public const int DefaultScreenHeight = 600;
 
     public const float MinCameraZoom = 0.5f;
     public const float MaxCameraZoom = 5;
@@ -122,6 +125,7 @@ public static class Settings {
     public readonly static ValueSetting<int> LastWindowPositionY = new(0);
     public readonly static ValueSetting<int> LastWindowWidth = new(DefaultScreenWidth);
     public readonly static ValueSetting<int> LastWindowHeight = new(DefaultScreenHeight);
+    public readonly static ValueSetting<int> WindowSettingsVersion = new(NativeWindowSettingsVersion);
     public readonly static ValueSetting<FullscreenType> FullscreenMode = new(FullscreenType.Borderless);
     public readonly static ValueSetting<bool> FullscreenState = new(false);
 
@@ -210,6 +214,12 @@ public static class Settings {
             Logger.Log(LogLevel.Warning, "Settings file is empty.");
             return;
         }
+
+        var storedWindowSettingsVersion = 0;
+        var windowVersionTag = settingsRoot[nameof(WindowSettingsVersion)];
+        if (windowVersionTag != null) {
+            int.TryParse(windowVersionTag.InnerText, out storedWindowSettingsVersion);
+        }
         
         var count = 0;
         foreach (var (key, setting) in SettingsLookup) {
@@ -225,6 +235,18 @@ public static class Settings {
             } catch (Exception e) {
                 Logger.Log(LogLevel.Warning, $"Error loading setting {key}: {e.Message}");
             }
+        }
+
+        if (storedWindowSettingsVersion < NativeWindowSettingsVersion) {
+            // Existing installations may still contain a window size saved while
+            // Alloy's native design was 1280x720. Reset it once to the Flash
+            // client's 800x600 native size; subsequent user resizes keep saving
+            // and restoring normally under the current version.
+            LastWindowWidth.Set(DefaultScreenWidth);
+            LastWindowHeight.Set(DefaultScreenHeight);
+            WindowSettingsVersion.Set(NativeWindowSettingsVersion);
+            Logger.Log(LogLevel.Information,
+                $"Migrated the native window size to {DefaultScreenWidth}x{DefaultScreenHeight}.");
         }
         
         Logger.Log(LogLevel.Trace, $"Loaded {count} of {SettingsLookup.Count} settings, {SettingsLookup.Count - count} reset to default");

@@ -32,10 +32,10 @@ public class StatusBar : Sprite {
         AddChild(_mainBar);
 
         labelString = label;
-        _label = new SimpleText(new TextConfig { Text = label, FontSize = 16, FontType = FontType.Bolder, X = 4, Y = _height / 2, OutlineThickness = 1, Color = 0xFFFFFF, OutlineColor = 0xFFFFFF, Anchor = UiAnchor.MiddleLeft });
+        _label = CreateText(label);
         AddChild(_label);
         
-        _valueText = new SimpleText(new TextConfig { Text = "", FontSize = 16, FontType = FontType.Bold, Y = _height / 2, OutlineThickness = 1, Color = 0xFFFFFF, OutlineColor = 0xFFFFFF, Anchor = UiAnchor.MiddleLeft });
+        _valueText = CreateText("");
         AddChild(_valueText);
 
         AddEventListener(MouseEvent.MouseOver, OnMouseOver);
@@ -43,7 +43,8 @@ public class StatusBar : Sprite {
     }
 
     public void Update(int val, int max, int boost = 0, int baseMax = -1, int level = -1) {
-        _mainBar.Resize((int)(_width * (val / (float)max)), _height);
+        var filledWidth = max > 0 ? (int)(_width * (Math.Clamp(val, 0, max) / (float)max)) : _width;
+        _mainBar.Resize(filledWidth, _height);
         _valueText.Visible = _mouseOver || Settings.ToggleBarText;
         UpdateText(val, max, boost, baseMax, level);
     }
@@ -56,9 +57,26 @@ public class StatusBar : Sprite {
         }
 
         labelString = label;
-        _label = new SimpleText(new TextConfig { Text = label, FontSize = 16, FontType = FontType.Bolder, X = 4, Y = _height / 2, OutlineThickness = 1, Color = 0xFFFFFF, OutlineColor = 0xFFFFFF, Anchor = UiAnchor.MiddleLeft });
+        _label = CreateText(label);
         AddChild(_label);
     }
+
+    private static SimpleText CreateText(string text) => new(new TextConfig {
+        Text = text,
+        FontSize = 14,
+        FontType = FontType.Bold,
+        // White-on-saturated-bar text: use a same-color secondary with no halo.
+        // The previous black secondary mixed a gray fringe into glyph edges
+        // (mix(black,white,bodyAlpha)) which vanishes on dark/gray backgrounds
+        // but reads as dirt on red/green/blue — the "poor AA". Same-color gives
+        // clean white-fading edges like the slot numbers use. Flash's soft
+        // DropShadow isn't reproducible with this shader's hard MTSDF halo.
+        X = 1,
+        Y = 1,
+        OutlineThickness = 0,
+        Color = 0xFFFFFF,
+        OutlineColor = 0xFFFFFF
+    });
 
     private void UpdateText(int val, int max, int boost, int baseMax, int level) {
         if (!_valueText.Visible) {
@@ -85,7 +103,9 @@ public class StatusBar : Sprite {
             _valueText.SetText($"{val}/{max}" + ltmt);
         else
             _valueText.SetText($"{val}");
-        _valueText.X = _width / 2 - _valueText.Width / 2;
+        // Flash centers valueText_.width (tight + 4px gutter) while Alloy
+        // centers tight bounds, so shift left 2px to align glyph centers.
+        _valueText.X = _width / 2 - _valueText.Width / 2 - 2;
     }
 
     private void OnMouseOver() => _mouseOver = true;

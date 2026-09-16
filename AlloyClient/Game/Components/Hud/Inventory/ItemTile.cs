@@ -73,7 +73,8 @@ public sealed class ItemTile : Sprite {
             _slotDetail.Visible = true;
         }
 
-        _slotId = new SimpleText(new TextConfig {Text = "", X = Size / 2, Y = Size / 2, FontSize = 32, FontType = FontType.Bold, Color = 0x363636, OutlineColor = 0x363636, Anchor = UiAnchor.Middle});
+        // Y=Size/2+3 confirmed against Flash reference slice.
+        _slotId = new SimpleText(new TextConfig {Text = "", X = Size / 2, Y = Size / 2 + 3, FontSize = 26, FontType = FontType.Bold, Color = 0x363636, OutlineColor = 0x363636, Anchor = UiAnchor.Middle});
         _slotId.Visible = false;
         AddChild(_slotId);
 
@@ -84,11 +85,13 @@ public sealed class ItemTile : Sprite {
         _sprite = new ObjectRect(new ObjectRectConfig {Texture = TextureHelper.FromGameAtlas(0x0096), Width = Size, Height = Size});
         AddChild(_sprite);
 
-        _tierText = new SimpleText(new TextConfig {FontSize = 16, FontType = FontType.Bold, Text = "", OutlineThickness = 6});
+        _tierText = new SimpleText(new TextConfig {FontSize = 12, FontType = FontType.Bold, Text = "", OutlineThickness = 1});
         _tierText.Visible = false;
         _tierText.SetAnchor(UiAnchor.RightBottom);
-        _tierText.X = Size - 2;
-        _tierText.Y = Size;
+        // Flash tier sits at y=24 (HEIGHT/2+4) with glyph bottoms ~40.
+        // Y=43 lands Alloy bottom-anchored glyphs within 1px of that.
+        _tierText.X = Size;
+        _tierText.Y = Size + 3;
         AddChild(_tierText);
 
         if (Owner != null) {

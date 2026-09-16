@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
@@ -13,9 +14,20 @@ public struct AppResponse {
 
 public static class AppRequests {
 
-    public static async Task Startup() {
-        await VerifyAsync();
-        await GetCharList();
+    public static async Task<AppResponse> Startup() {
+        var login = GlobalData.Get<LoginData>();
+
+        // An empty local account is the Flash client's guest path. Guests do
+        // not pass /account/verify, but /char/list still returns the guest
+        // account and its character list.
+        if (login is null || (string.IsNullOrWhiteSpace(login.Username) && string.IsNullOrWhiteSpace(login.Password))) {
+            return await GetCharList();
+        }
+
+        // VerifyAsync loads the list after a successful verify. Returning its
+        // result keeps startup to one character-list request and propagates a
+        // list failure to the loading route.
+        return await VerifyAsync(login.Username, login.Password);
     }
     
     public static async Task<AppResponse> VerifyAsync() {
@@ -56,7 +68,10 @@ public static class AppRequests {
             Settings.SaveLocalAccount();
         }
 
-        await GetCharList();
+        var charList = await GetCharList();
+        if (!charList.Success) {
+            return charList;
+        }
 
         return new AppResponse { Success = true };
     }
@@ -107,17 +122,28 @@ public static class AppRequests {
             return new AppResponse { Success = false, Message = "Failed to contact server." };
         }
         
-        var xml = XElement.Parse(response);
+        try {
+            var xml = XElement.Parse(response);
 
-        if (xml.Name.LocalName == "Error" || xml.Element("Account") == null) {
-            var message = xml.Value;
-            return new AppResponse { Success = false, Message = string.IsNullOrWhiteSpace(message) ? "Failed to load character list." : message };
+            if (xml.Name.LocalName == "Error" || xml.Element("Account") == null) {
+                var message = xml.Value;
+                return new AppResponse { Success = false, Message = string.IsNullOrWhiteSpace(message) ? "Failed to load character list." : message };
+            }
+
+            // Build all data before publishing any of it. A malformed list
+            // must not leave a partial account state behind for a later route.
+            var account = new AccountData(xml.Element("Account"));
+            var characterList = new CharacterListData(xml);
+            var news = new NewsData(xml.Elements("NewsItem"));
+            var servers = new ServerListData(xml.Element("Servers") ?? DefaultServersXml());
+
+            GlobalData.Add(account);
+            GlobalData.Add(characterList);
+            GlobalData.Add(news);
+            GlobalData.Add(servers);
+        } catch (Exception) {
+            return new AppResponse { Success = false, Message = "Invalid character list response." };
         }
-
-        GlobalData.Add(new AccountData(xml.Element("Account")));
-        GlobalData.Add(new CharacterListData(xml));
-        GlobalData.Add(new NewsData(xml.Elements("NewsItem")));
-        GlobalData.Add(new ServerListData(xml.Element("Servers") ?? DefaultServersXml()));
         
         return new AppResponse{ Success = true };
     }

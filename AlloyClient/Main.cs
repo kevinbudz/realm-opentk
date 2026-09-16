@@ -59,15 +59,27 @@ public sealed class Main() : GameWindow(new Version(4, 6), ILogger.Factory) {
             Settings.LastWindowPositionY.Set(Math.Min(Math.Max(Settings.LastWindowPositionY, displayArea.Min.Y), displayArea.Max.Y - Settings.LastWindowHeight));
         }
         
-        Toolkit.Window.SetPosition(Window, new Vector2i(Settings.LastWindowPositionX, Settings.LastWindowPositionY));
-        Toolkit.Window.SetSize(Window, new Vector2i(Settings.LastWindowWidth, Settings.LastWindowHeight));
-        Toolkit.Window.SetMode(Window, Settings.LastWindowMode);
+        // Window calls may synchronously emit resize/move events that update the
+        // saved settings. Snapshot the requested startup state before applying it.
+        var initialWindowMode = Settings.LastWindowMode.Value;
+        var initialWindowPosition = new Vector2i(Settings.LastWindowPositionX, Settings.LastWindowPositionY);
+        var initialWindowSize = new Vector2i(Settings.LastWindowWidth, Settings.LastWindowHeight);
+
+        Toolkit.Window.SetMode(Window, initialWindowMode);
+        Toolkit.Window.SetPosition(Window, initialWindowPosition);
+        if (initialWindowMode == WindowMode.Normal) {
+            // Setting the native mode can recreate the platform window and
+            // replace a size applied before it. Apply the saved client size
+            // after the mode so a clean/migrated launch is truly 800x600.
+            Toolkit.Window.SetClientSize(Window, initialWindowSize);
+        }
         Toolkit.Window.SetMinClientSize(Window, 800, 600); // <-- Must be set after window state is loaded from settings
         #endregion
         Toolkit.Window.SetTitle(Window, "RealmTk");
             
         // Initial GL state
         Toolkit.Window.GetClientSize(Window, out var size);
+        Settings.ScreenSize = size;
         GL.Viewport(0, 0, size.X, size.Y);
         GL.ClearColor(0f, 0f, 0f, 1.0f);
         GL.Disable(EnableCap.StencilTest);
@@ -177,6 +189,10 @@ public sealed class Main() : GameWindow(new Version(4, 6), ILogger.Factory) {
                     Settings.LastWindowMode.Set(mode);
                 }
                 Settings.ScreenSize = e.NewClientSize;
+                if (mode == WindowMode.Normal) {
+                    Settings.LastWindowWidth.Set(e.NewClientSize.X);
+                    Settings.LastWindowHeight.Set(e.NewClientSize.Y);
+                }
                 break;
             case WindowMoveEventArgs e:
                 Settings.LastWindowPositionX.Set(e.WindowPosition.X);

@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using AlloyClient.Game.Objects;
+﻿using AlloyClient.Game.Objects;
 using Alloy.UiLib.BuiltIn;
 using Alloy.UiLib.Core;
 using AlloyClient.Ui.Components.Buttons;
@@ -9,6 +8,15 @@ namespace AlloyClient.Game.Components.Hud.Inventory
 {
     public sealed class TabStrip : Sprite
     {
+        private const int TabWidth = 28;
+        private const int TabHeight = 35;
+        private const int TabTopOffset = 27;
+        private const int TabXPadding = 2;
+        private const int TabYPadding = 8;
+        private const int PanelWidth = 186;
+        private const int PanelHeight = 126;
+        private const int ContentPadding = 7;
+
         private enum TabTypes
         {
             None,
@@ -18,117 +26,166 @@ namespace AlloyClient.Game.Components.Hud.Inventory
             PetInfo
         }
 
-        private readonly uint TabColor = 2368034;
-        private readonly uint BackgroundColor = 7039594;
+        private const uint SelectedTabColor = 2368034;
+        private const uint TabColor = 7039594;
 
-        private Dictionary<int, TabTypes> Tabs = new Dictionary<int, TabTypes>()
-        {
-            { (int)TabTypes.Inventory, TabTypes.Inventory }, //Key is 1
-            { (int)TabTypes.StatsView, TabTypes.StatsView }  //Key is 2
-        };
-
-        public int currentTabIndex = 1;
-
-        private readonly IconButton InventoryTabButton;
-        private readonly IconButton BackpackTabButton;
-        private readonly IconButton StatsViewTabButton;
-
-        private readonly CutEdgeRect InventoryTab;
-        private readonly CutEdgeRect BackpackTab;
-        private readonly CutEdgeRect StatsViewTab;
-
-        private InventoryGrid _inventoryGrid;
-        private InventoryGrid _backpackPanel;
-        private StatsPanel _statsPanel;
-
-        private CutEdgeRect invTab;
-        private IconButton invTabButton;
+        public int currentTabIndex = (int)TabTypes.Inventory;
 
         private readonly Entity _owner;
+        private int _nextTabX;
+
+        private readonly RoundedRect _inventoryTab;
+        private readonly RoundedRect _statsTab;
+        private RoundedRect _backpackTab;
+        private readonly CutEdgeRect _contentBackground;
+
+        private readonly InventoryGrid _inventoryGrid;
+        private InventoryGrid _backpackPanel;
+        private readonly StatsPanel _statsPanel;
 
         public TabStrip(Entity owner)
         {
             _owner = owner;
 
-            currentTabIndex = (int)TabTypes.Inventory;
+            _inventoryTab = AddTab(TabTypes.Inventory);
+            _statsTab = AddTab(TabTypes.StatsView);
 
-            Update();
-        }
-
-        private void Update()
-        {
-            int Y = -24;
-            int X = 6;
-
-            if (Map.LocalPlayer.HasBackPack && !Tabs.ContainsKey(3)) 
-            { 
-                AddTab(TabTypes.Backpack); 
-            }
-            
-            RemoveChildren(); //Remove All Panels
-            _owner.InventoryUpdate.RemoveAll(); //Remove InventoryUpdate
-
-            foreach (var tab in Tabs)
+            // Flash's container begins 27px below the strip origin and covers
+            // the lower edge of each 35px tab.
+            _contentBackground = new CutEdgeRect(new CutEdgeConfig
             {
-                switch (tab.Value)
-                {
-                    case TabTypes.Inventory:
-                        invTab = InventoryTab;
-                        invTabButton = InventoryTabButton;
-                        break;
-                    case TabTypes.StatsView:
-                        invTab = StatsViewTab;
-                        invTabButton = StatsViewTabButton;
-                        break;
-                    case TabTypes.Backpack:
-                        invTab = BackpackTab;
-                        invTabButton = BackpackTabButton;
-                        break;
-                    case TabTypes.PetInfo:
-                        break;
-                }
+                Y = TabTopOffset,
+                Width = PanelWidth,
+                Height = PanelHeight,
+                CutX = 6,
+                CutY = 6,
+                Cuts = CutEdges.All,
+                Color = SelectedTabColor
+            });
+            AddChild(_contentBackground);
 
-                invTab = new CutEdgeRect(new CutEdgeConfig { Width = 34, Height = 24, CutX = 5, CutY = 5, Cuts = CutEdges.Top, Color = currentTabIndex == tab.Key ? TabColor : BackgroundColor });
-                invTab.X = X;
-                invTab.Y = Y;
-
-                AddChild(invTab);
-
-                invTabButton = new IconButton(new IconButtonConfig
-                {
-                    Texture = TextureHelper.FromGameAtlas("lofiInterfaceBig", 23 + (tab.Key), false),
-                    Alpha = 1,
-                    X = X + 6,
-                    Y = Y,
-                    Width = 24,
-                    Height = 24,
-                    OnClick = () => OnTabSelected(tab.Value)
-                });
-
-                AddChild(invTabButton);
-
-                X = invTab.X + 40;
-            }
-
-            InitializeTabs();
-        }
-
-        private void AddTab(TabTypes tab)
-        {
-            Tabs.Add((int)tab, tab);
-        }
-
-        private void InitializeTabs()
-        {
-            _inventoryGrid = new InventoryGrid(Map.LocalPlayer, 4, false);
+            // Tab content is retained for the lifetime of this strip. Recreating it
+            // during selection used to clear every InventoryUpdate listener on the
+            // owner, including the equipment grid and the newly-created grids.
+            _inventoryGrid = new InventoryGrid(_owner, 4, false);
+            _inventoryGrid.X = ContentPadding;
+            _inventoryGrid.Y = TabTopOffset + ContentPadding;
             AddChild(_inventoryGrid);
 
-            _statsPanel = new StatsPanel();
+            _statsPanel = new StatsPanel(_owner as Player);
+            _statsPanel.Y = TabTopOffset + (PanelHeight - StatsPanel.PanelHeight) / 2;
             AddChild(_statsPanel);
 
-            _backpackPanel = new InventoryGrid(Map.LocalPlayer, 12, false, true);
-            AddChild(_backpackPanel);
+            if (_owner is Player player && player.HasBackPack)
+            {
+                AddBackpackTab();
+            }
 
+            // HasBackPack arrives as player stat data and does not have a dedicated
+            // signal yet. Polling this presentation flag avoids rebuilding existing
+            // views when the server grants a backpack during play.
+            AddEventListener(Event.EnterFrame, OnFrameEnter);
+            AddEventListener(Event.Added, OnAdded);
+            AddEventListener(Event.Removed, OnRemoved);
+            SetTabVisibility(currentTabIndex);
+        }
+
+        private RoundedRect AddTab(TabTypes tabType)
+        {
+            var tabKey = (int)tabType;
+            // Flash TabStripView draws tabs with drawRoundRect(28,35,radius 9).
+            var tab = new RoundedRect(new RoundedRectConfig
+            {
+                Width = TabWidth,
+                Height = TabHeight,
+                Radius = 9,
+                Corners = CutEdges.Top,
+                Color = currentTabIndex == tabKey ? SelectedTabColor : TabColor,
+                MouseEnabled = true
+            });
+            tab.X = _nextTabX;
+            tab.Y = TabYPadding;
+            tab.AddEventListener(MouseEvent.LeftUp, () => OnTabSelected(tabType));
+
+            // Flash TabView places a 40px IconFactory bitmap at (-5,-11) inside
+            // the 28x35 tab, with a 16px visual at (7,1) relative to the tab.
+            // Use a padded 18px quad so the 16px visual keeps 1px for outline.
+            var button = new ObjectRect(new ObjectRectConfig
+            {
+                Texture = TextureHelper.FromGameAtlas("lofiInterfaceBig", 23 + tabKey),
+                X = _nextTabX + 6,
+                Y = TabYPadding,
+                Width = 18,
+                Height = 18,
+                MouseEnabled = true
+            });
+            button.AddEventListener(MouseEvent.LeftUp, () => OnTabSelected(tabType));
+
+            // Tabs live behind the content container so its top edge masks the
+            // lower 16px of each tab, matching Flash's display-list order.
+            if (_contentBackground == null)
+            {
+                AddChild(tab);
+                AddChild(button);
+            }
+            else
+            {
+                var containerIndex = GetChildIndex(_contentBackground);
+                AddChildAt(tab, containerIndex);
+                AddChildAt(button, containerIndex + 1);
+            }
+
+            _nextTabX = tab.X + TabWidth + TabXPadding;
+            return tab;
+        }
+
+        private void AddBackpackTab()
+        {
+            if (_backpackPanel != null)
+            {
+                return;
+            }
+
+            _backpackTab = AddTab(TabTypes.Backpack);
+            _backpackPanel = new InventoryGrid(_owner, 12, false, true);
+            _backpackPanel.X = ContentPadding;
+            _backpackPanel.Y = TabTopOffset + ContentPadding;
+            AddChild(_backpackPanel);
+            SetTabVisibility(currentTabIndex);
+        }
+
+        private void OnFrameEnter()
+        {
+            if (_owner is Player player && player.HasBackPack)
+            {
+                AddBackpackTab();
+            }
+
+            _statsPanel.Refresh();
+            _inventoryGrid.RefreshPotionCounts();
+            _backpackPanel?.RefreshPotionCounts();
+        }
+
+        private void OnAdded()
+        {
+            AddEventListener(Event.EnterFrame, OnFrameEnter);
+        }
+
+        private void OnRemoved(Event @event)
+        {
+            // Removed bubbles from descendants. Only tear down this strip when the
+            // strip itself is detached from its parent.
+            if (@event.Target != this)
+            {
+                return;
+            }
+
+            RemoveEventListener(Event.EnterFrame, OnFrameEnter);
+        }
+
+        private void OnTabSelected(TabTypes tabType)
+        {
+            currentTabIndex = (int)tabType;
             SetTabVisibility(currentTabIndex);
         }
 
@@ -136,69 +193,82 @@ namespace AlloyClient.Game.Components.Hud.Inventory
         {
             _inventoryGrid.Visible = tabType == (int)TabTypes.Inventory;
             _statsPanel.Visible = tabType == (int)TabTypes.StatsView;
-            _backpackPanel.Visible = tabType == (int)TabTypes.Backpack;
-        }
+            _inventoryTab.SetColor(tabType == (int)TabTypes.Inventory ? SelectedTabColor : TabColor);
+            _statsTab.SetColor(tabType == (int)TabTypes.StatsView ? SelectedTabColor : TabColor);
 
-        private void OnTabSelected(TabTypes tabType)
-        {
-            currentTabIndex = (int)tabType;
-            Update();
+            if (_backpackPanel != null)
+            {
+                _backpackPanel.Visible = tabType == (int)TabTypes.Backpack;
+                _backpackTab.SetColor(tabType == (int)TabTypes.Backpack ? SelectedTabColor : TabColor);
+            }
         }
     }
 
     public class StatsPanel : Sprite
     {
-        public StatsPanel()
+        public const int PanelHeight = 45;
+
+        private readonly Player _player;
+        private readonly SimpleText[] _statValues = new SimpleText[6];
+
+        public StatsPanel(Player player)
         {
-            var p = Map.LocalPlayer;
-            int y = 150/2 - 16 - 10; //Height - Size - Spacing 
-            int offset = 40;
-            var bg = new CutEdgeRect(new CutEdgeConfig { Width = 224, Height = 150, CutX = 6, CutY = 6, Cuts = CutEdges.All, Color = 0x242222 });
-            AddChild(bg);
+            _player = player;
+            string[] indexNames = { "ATT", "DEF", "SPD", "DEX", "VIT", "WIS" };
 
-            string[] IndexName = { "ATK" , "DEF", "SPD", "DEX" , "VIT" , "WIS"};
-            int[] IndexValue = { p.Attack, p.Defense, p.Speed, p.Dexterity, p.Vitality, p.Wisdom};
-
-
-            for (int i = 0; i < IndexValue.Length; i++) 
+            for (var i = 0; i < indexNames.Length; i++)
             {
-                bool even = (i == 0 || i == 2 || i == 4);
-                bool extraInfo = false;
+                var column = i % 2;
+                var row = i / 2;
+                // Rows +4 confirmed against Flash reference slice.
+                var x = column == 0 ? 52 : 148;
+                var y = row * 15 + 4;
 
-                SimpleText StatName = new SimpleText(new TextConfig 
-                { 
-                    Text = IndexName[i], 
-                    FontSize = 16, 
-                    FontType = FontType.Normal, 
-                    X = even ? offset : Width - 16 - offset*2, 
-                    Y = y, 
-                    OutlineThickness = 0, 
-                    Color = 0xFFFFFF, 
-                    OutlineColor = 0xFFFFFF, 
-                    Anchor = UiAnchor.
-                    MiddleLeft 
+                var statName = new SimpleText(new TextConfig
+                {
+                    Text = indexNames[i] + " -",
+                    FontSize = 13,
+                    FontType = FontType.Normal,
+                    X = x - 1,
+                    Y = y,
+                    OutlineThickness = 0,
+                    Color = 0xB3B3B3,
+                    OutlineColor = 0,
+                    Anchor = UiAnchor.RightTop
                 });
+                AddChild(statName);
 
-                AddChild(StatName);
-
-                SimpleText StatValue = new SimpleText(new TextConfig 
-                { 
-                    Text = IndexValue[i].ToString() + (extraInfo ? $" +{0}" : ""), 
-                    FontSize = 16, 
-                    FontType = FontType.Bold, 
-                    X = (even ? offset : Width - 16 - offset*2) + StatName.Width + 5, //kinda gross but its needed
-                    Y = y, 
-                    OutlineThickness = 0, 
-                    Color = 0xFFC800, 
-                    OutlineColor = 0xFFFFFF, 
-                    Anchor = UiAnchor.MiddleLeft 
+                var statValue = new SimpleText(new TextConfig
+                {
+                    Text = "0",
+                    FontSize = 13,
+                    FontType = FontType.Bold,
+                    X = x + 1,
+                    Y = y,
+                    OutlineThickness = 0,
+                    Color = 0xB3B3B3,
+                    OutlineColor = 0
                 });
-
-                AddChild(StatValue);
-
-                y += even ? 0 : StatName.Height + 10;
+                AddChild(statValue);
+                _statValues[i] = statValue;
             }
+
+            Refresh();
+        }
+
+        public void Refresh()
+        {
+            if (_player == null)
+            {
+                return;
+            }
+
+            _statValues[0].SetText(_player.Attack.ToString());
+            _statValues[1].SetText(_player.Defense.ToString());
+            _statValues[2].SetText(_player.Speed.ToString());
+            _statValues[3].SetText(_player.Dexterity.ToString());
+            _statValues[4].SetText(_player.Vitality.ToString());
+            _statValues[5].SetText(_player.Wisdom.ToString());
         }
     }
 }
-

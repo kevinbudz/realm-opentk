@@ -7,6 +7,8 @@ using Alloy.UiLib.Signals;
 using AlloyClient.Utils;
 using AlloyClient.Ui;
 using AlloyClient.Ui.Components.Buttons;
+using AlloyClient.Logging;
+using Microsoft.Extensions.Logging;
 using OpenTK.Mathematics;
 
 namespace AlloyClient.Game.Components.Hud;
@@ -16,10 +18,14 @@ public sealed class Minimap : Sprite {
     public readonly static SingleSignal<int> OnZoom = new();
     public readonly static SingleSignal<int, int> OnNewMap = new();
 
+    private readonly static ILogger Logger = ILogger.CreateLogger(nameof(Minimap));
+
     private readonly static ColorTransform DefaultCt = new (1f, 1f, 1f, 1f);
     private readonly static ColorTransform FadeCt = new (0.5f, 0.5f, 0.5f, 1f);
     
-    public const int MapSize = 230;
+    // Flash constructs MiniMap at its final 192x192 design size. Keeping this
+    // native avoids resampling the map, controls, markers, and player arrow.
+    public const int MapSize = 192;
     
     private float _zoom = 4.0f;
     private float _maxZoom;
@@ -46,34 +52,32 @@ public sealed class Minimap : Sprite {
         _layer = new MinimapLayer();
         AddChild(_layer);
 
-        _zoomIn = new IconButton(new IconButtonConfig {
-            Texture = TextureHelper.FromGameAtlas("lofiInterface", 54, false),
-            X = MapSize,
-            Y = 0,
-            Width = 24,
-            Height = 24,
-            Anchor = UiAnchor.RightTop,
-            OnClick = () => ZoomHandle(1)
-        });
-        AddChild(_zoomIn);
-        
         _zoomOut = new IconButton(new IconButtonConfig {
-            Texture = TextureHelper.FromGameAtlas("lofiInterface", 55, false),
-            X = MapSize,
-            Y = _zoomIn.Height + 4,
-            Width = 24,
-            Height = 24,
-            Anchor = UiAnchor.RightTop,
+            Texture = TextureHelper.FromGameAtlas("lofiInterface", 54, false),
+            X = MapSize - 20,
+            Y = 4,
+            Width = 16,
+            Height = 16,
             OnClick = () => ZoomHandle(-1)
         });
         AddChild(_zoomOut);
+        
+        _zoomIn = new IconButton(new IconButtonConfig {
+            Texture = TextureHelper.FromGameAtlas("lofiInterface", 55, false),
+            X = MapSize - 20,
+            Y = 14,
+            Width = 16,
+            Height = 16,
+            OnClick = () => ZoomHandle(1)
+        });
+        AddChild(_zoomIn);
 
         _arrow = new ObjectRect(new ObjectRectConfig {
             Texture = TextureHelper.FromGameAtlas("lofiInterface", 54, false),
             X = MapSize / 2,
             Y = MapSize / 2,
-            Width = 9,
-            Height = 36,
+            Width = 8,
+            Height = 32,
             Anchor = UiAnchor.Middle
         });
         _arrow.ColorTransformation = new ColorTransform(0f, 0f, 1f, 1f);
@@ -124,6 +128,13 @@ public sealed class Minimap : Sprite {
         _maxZoom = size / 32;
         _zoomStep = size / Settings.DefaultScreenWidth ;
         _size = size;
+        // Flash MiniMap starts at zoom index 0 (4 screen px per tile over its
+        // 192px view = 48 visible tiles). Our view diameter is _size/_zoom
+        // tiles, so _zoom = _size/48 reproduces the default framing; clamp to
+        // whole-map for maps smaller than 48 tiles like Flash's minZoom does.
+        _zoom = Math.Max(1f, Math.Min(size / 48f, _maxZoom));
+        UpdateButtons();
+        Logger.Log(LogLevel.Information, $"[MinimapParity] map={w}x{h} size={size} zoom={_zoom} maxZoom={_maxZoom}");
         MinimapTexture.ClearData();
     }
     

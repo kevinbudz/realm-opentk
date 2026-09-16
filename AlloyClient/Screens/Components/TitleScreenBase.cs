@@ -1,4 +1,5 @@
-﻿using Alloy.UiLib.Core;
+﻿using System;
+using Alloy.UiLib.Core;
 using System.Linq;
 using Alloy.UiLib.BuiltIn;
 using AlloyClient.Data;
@@ -20,12 +21,21 @@ public abstract class TitleScreenBase : Screen {
 
     protected const int MenuGap = 50;
 
+    // AccountScreen.as keeps the header in the unscaled window chrome. These
+    // are Flash design-space offsets; OnResize converts them to window px.
+    private const int MusicX = 0;
+    private const int MusicY = 0;
+    private const int RankX = 36;
+    private const int RankY = 4;
+    private const int AccountInfoMargin = 10;
+    private const int AccountInfoY = 2;
+
     private readonly ScreenDarkenOverlay _darken = new();
     private readonly TitleMenuRibbon _menuRibbon = new(Settings.DefaultScreenWidth);
 
-    private readonly MusicButton _music = new(new MusicButtonConfig { X = 7, Y = 7, Width = 32, Height = 32 });
+    private readonly MusicButton _music = new(new MusicButtonConfig { X = MusicX, Y = MusicY, Width = 32, Height = 32 });
 
-    private readonly Container _accountIdentity = new(new ContainerConfig { X = 50, Y = 7 });
+    private readonly Container _accountIdentity = new(new ContainerConfig { X = RankX, Y = RankY });
 
     protected readonly Container MenuBar = new(new ContainerConfig {
         X = Settings.DefaultScreenWidth / 2,
@@ -77,16 +87,16 @@ public abstract class TitleScreenBase : Screen {
     protected override void OnResize(ResizeEvent args) {
         var scale = Stage.ScreenScale;
 
-        _music.X = (int)(7 * scale.X);
-        _music.Y = (int)(7 * scale.Y);
+        _music.X = (int)MathF.Round(MusicX * scale.X);
+        _music.Y = (int)MathF.Round(MusicY * scale.Y);
 
         _accountIdentity.Scale = scale;
-        _accountIdentity.X = (int)(50 * scale.X);
-        _accountIdentity.Y = (int)(7 * scale.Y);
+        _accountIdentity.X = (int)MathF.Round(RankX * scale.X);
+        _accountIdentity.Y = (int)MathF.Round(RankY * scale.Y);
 
         Overlay.Scale = scale;
-        Overlay.X = args.Width - (int)(10 * scale.X);
-        Overlay.Y = (int)(10 * scale.Y);
+        Overlay.X = args.Width - (int)MathF.Round(AccountInfoMargin * scale.X);
+        Overlay.Y = (int)MathF.Round(AccountInfoY * scale.Y);
 
         var contentWidth = (int)System.Math.Ceiling(args.Width / scale.X);
         _menuRibbon.ResizeWidth(contentWidth);

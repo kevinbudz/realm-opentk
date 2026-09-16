@@ -3,14 +3,22 @@ using Alloy.UiLib.BuiltIn;
 namespace AlloyClient.Ui.Components.Graphics;
 
 /// <summary>
-/// Shared title-screen ribbon, positioned to match the Haxe ScreenGraphic.
+/// Shared title-screen ribbon, positioned from the Flash MenuFrame design.
+///
+/// MenuFrame is authored in the 800x600 design space. The parent title
+/// screen supplies the height-derived scale and expands this ribbon to the
+/// physical window width, so the bar remains edge-anchored on wide windows.
 /// </summary>
 public sealed class TitleMenuRibbon : Container {
-    public const int TopY = 629;
-    public const int RibbonHeight = 62;
+    // MenuFrame.as: BAR_TOP = 524, BAR_HEIGHT = 52.
+    public const int TopY = 524;
+    public const int RibbonHeight = 52;
     public const int MenuCenterY = TopY + RibbonHeight / 2 + 3;
 
-    private const int FadeWidth = 120;
+    // Preserve the ribbon's soft edge in design units. The previous values
+    // were authored for the old 1280-wide Alloy shell; 75 is the same
+    // 120px edge normalized to Flash's 800px design width.
+    private const int FadeWidth = 75;
     private const int FadeSteps = 32;
 
     private readonly ColorRect _body;

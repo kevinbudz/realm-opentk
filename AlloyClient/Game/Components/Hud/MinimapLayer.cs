@@ -42,7 +42,8 @@ public sealed class MinimapLayer : Container {
     private void AddObject(Vector2 pos, uint rgb) {
         if (_count >= MaxEntities) return;
 
-        const float size = 3.25f;
+        // Flash draws minimap entities as exact 4x4 squares.
+        const float size = 2f;
 
         var color = Color.FromHexRGB(rgb);
         VertexData[_count * 4 + 0] = new VertexUi(new Vector2(pos.X - size, pos.Y - size), color);

@@ -27,10 +27,11 @@ public static class TextureHelper {
         return new TextureInfo(uv.ToPosition(), TextureType.GameAtlas);
     }
     
-    public static TextureInfo FromGameAtlas(ushort id) {
+    public static TextureInfo FromGameAtlas(ushort id, bool padding = true) {
         if (!ObjectLibrary.TypeToTextureData.TryGetValue(id, out var data))
             return FromGameAtlas("invisible", 0);
         var uv = data.GetTexture();
+        if (!padding) uv.RemovePadding();
         return new TextureInfo(uv.ToPosition(), TextureType.GameAtlas);
     }
 

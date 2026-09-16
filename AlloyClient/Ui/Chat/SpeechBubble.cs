@@ -15,6 +15,7 @@ public sealed class SpeechBubble : Sprite {
 
     private readonly double _lifetime;
     private readonly Entity _owner;
+    private bool _detached;
 
     public SpeechBubble(SpeechData data, double time) {
         _lifetime = time + DefaultLifetimeMs;
@@ -64,10 +65,11 @@ public sealed class SpeechBubble : Sprite {
         AddChild(txt);
         
         SetAnchor(UiAnchor.MiddleBottom);
+        AddEventListener(Event.RemovedFromStage, OnRemovedFromStage);
     }
 
     public bool Update(in GameTime gameTime, in Camera camera) {
-        if (_lifetime < gameTime.TotalMs || _owner == null) {
+        if (_detached || _lifetime < gameTime.TotalMs || _owner == null || Stage is null) {
             return false;
         }
         
@@ -77,5 +79,14 @@ public sealed class SpeechBubble : Sprite {
         X = pos.X;
         Y = pos.Y;
         return true;
+    }
+
+    private void OnRemovedFromStage() {
+        _detached = true;
+        Visible = false;
+
+        // The bubble is driven by ChatLayer.Update; remove this lifecycle hook once
+        // the display tree detaches it so the bubble retains no event subscription.
+        RemoveEventListener(Event.RemovedFromStage, OnRemovedFromStage);
     }
 }
