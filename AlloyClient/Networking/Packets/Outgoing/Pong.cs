@@ -1,7 +1,7 @@
 ﻿namespace AlloyClient.Networking.Packets.Outgoing;
 
 public class Pong : OutgoingPacket<Pong> {
-    public override PacketId PacketId => PacketId.Unknown;
+    public override PacketId PacketId => PacketId.Pong;
 
     public int Serial;
 

@@ -1,11 +1,12 @@
-﻿using AlloyClient.Networking.Packets.Outgoing;
+﻿using System;
+using AlloyClient.Networking.Packets.Outgoing;
 
 namespace AlloyClient.Networking.Packets.Incoming;
 
 public class Ping : IncomingPacket<Ping> {
     public int RTT;
 
-    public override PacketId PacketId => PacketId.Unknown;
+    public override PacketId PacketId => PacketId.Ping;
 
     public override void Reset() {
         RTT = 0;
@@ -16,7 +17,10 @@ public class Ping : IncomingPacket<Ping> {
     }
 
     public override void Handle() {
-        Client.QueuePacket(Pong.CreatePacket());
+        var pong = Pong.CreatePacket();
+        pong.Serial = RTT;
+        pong.Time = Environment.TickCount;
+        Client.QueuePacket(pong);
     }
 
     public override string ToString() {

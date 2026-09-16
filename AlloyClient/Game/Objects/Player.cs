@@ -280,7 +280,7 @@ public class Player : Entity {
                 case StatsType.MagicPotionStack:
                     MagicStackCount = stat.Value;
                     break;
-                case StatsType.Skin:
+                case StatsType.Texture:
                     Skin = (ushort)stat.Value;
                     SetPlayerSkinTemplate(Skin);
                     break;

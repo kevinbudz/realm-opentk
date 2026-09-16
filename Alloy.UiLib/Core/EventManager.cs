@@ -94,6 +94,7 @@ public abstract class EventManager {
         task.ContinueWith(t => {
             if (task.IsFaulted) {
                 Logger.Log(LogLevel.Error, task.Exception, "Task Failed");
+                return;
             }
 
             QueueTaskFinish(() => callback(t.Result));
@@ -104,6 +105,7 @@ public abstract class EventManager {
         task.ContinueWith(t => {
             if (task.IsFaulted) {
                 Logger.Log(LogLevel.Error, task.Exception, "Task Failed");
+                return;
             }
 
             QueueTaskFinish(() => callback(t.Result, GetStatus(t)));

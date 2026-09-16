@@ -4,7 +4,7 @@ public class GlobalNotification : IncomingPacket<GlobalNotification> {
     public int Type;
     public string Text;
 
-    public override PacketId PacketId => PacketId.Unknown;
+    public override PacketId PacketId => PacketId.GlobalNotification;
 
     public override void Reset() {
         Type = 0;

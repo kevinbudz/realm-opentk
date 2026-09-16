@@ -42,7 +42,8 @@ public class SocketReceiveState : IDisposable {
             return false;
 
         var span = _buffer.AsSpan(_bytesRead, _bytesAvailable);
-        var rdr = new SpanReader(span);
+        //Wire order is big-endian (see RotMG.Networking.PacketReader/Writer on the server).
+        var rdr = new SpanReader(span, false);
 
         int length = rdr.ReadInt32();
 
@@ -57,7 +58,7 @@ public class SocketReceiveState : IDisposable {
 
     public byte ReadPacket(out SpanReader bodyReader) {
         var span = _buffer.AsSpan(_bytesRead, _bytesAvailable);
-        var rdr = new SpanReader(span);
+        var rdr = new SpanReader(span, false);
 
         int length = rdr.ReadInt32();
         var packetId = rdr.ReadByte();
@@ -67,7 +68,7 @@ public class SocketReceiveState : IDisposable {
         if (_bytesAvailable == 0)
             _bytesRead = 0;
 
-        bodyReader = new SpanReader(span.Slice(5, length - 5));
+        bodyReader = new SpanReader(span.Slice(5, length - 5), false);
 
         return packetId;
     }

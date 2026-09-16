@@ -58,29 +58,26 @@ public static class PacketUtils {
     public static IIncomingPacket CreateIncomingPacket(PacketId packetId) {
         return packetId switch {
             PacketId.AccountList => AccountList.CreatePacket(),
-            //PacketId.AllyShoot => AllyShoot.CreatePacket(),
+            PacketId.AllyShoot => AllyShoot.CreatePacket(),
             PacketId.Aoe => Aoe.CreatePacket(),
             PacketId.BuyResult => BuyResult.CreatePacket(),
-            //PacketId.ClientStat => ClientStat.CreatePacket(),
             PacketId.CreateSuccess => CreateSuccess.CreatePacket(),
             PacketId.Damage => Damage.CreatePacket(),
             PacketId.Death => Death.CreatePacket(),
             PacketId.EnemyShoot => EnemyShoot.CreatePacket(),
             PacketId.Failure => Failure.CreatePacket(),
-            //PacketId.File => File.CreatePacket(),
-            //PacketId.GlobalNotification => GlobalNotification.CreatePacket(),
+            PacketId.GlobalNotification => GlobalNotification.CreatePacket(),
             PacketId.Goto => Goto.CreatePacket(),
             PacketId.GuildResult => GuildResult.CreatePacket(),
             PacketId.InvitedToGuild => InvitedToGuild.CreatePacket(),
             PacketId.InvResult => InvResult.CreatePacket(),
             PacketId.MapInfo => MapInfo.CreatePacket(),
-            //PacketId.NameResult => NameResult.CreatePacket(),
+            PacketId.NameResult => NameResult.CreatePacket(),
             PacketId.NewTick => NewTick.CreatePacket(),
             PacketId.Notification => Notification.CreatePacket(),
-            //PacketId.Pic => Pic.CreatePacket(),
-            //PacketId.Ping => Ping.CreatePacket(),
+            PacketId.Ping => Ping.CreatePacket(),
             PacketId.PlaySound => PlaySound.CreatePacket(),
-            //PacketId.QuestObjId => QuestObjId.CreatePacket(),
+            PacketId.QuestObjId => QuestObjId.CreatePacket(),
             PacketId.Reconnect => Reconnect.CreatePacket(),
             PacketId.ServerPlayerShoot => ServerPlayerShoot.CreatePacket(),
             PacketId.ShowEffect => ShowEffect.CreatePacket(),
@@ -91,8 +88,9 @@ public static class PacketUtils {
             PacketId.TradeRequested => TradeRequested.CreatePacket(),
             PacketId.TradeStart => TradeStart.CreatePacket(),
             PacketId.Update => Update.CreatePacket(),
-            PacketId.ServerProjectileProps => ServerProjectileProps.CreatePacket(),
-            _ => throw new ArgumentException($"Unsupported packet ID: {packetId}")
+            //Unknown/future ids are tolerated: the body slice is already
+            //bounded by the frame length, so there is nothing to skip.
+            _ => UnknownPacket.CreatePacket()
         };
     }
 }

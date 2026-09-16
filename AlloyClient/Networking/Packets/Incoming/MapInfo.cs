@@ -9,11 +9,10 @@ public class MapInfo : IncomingPacket<MapInfo> {
     public int Height;
     public string Name;
     public string DisplayName;
-    public int Difficulty;
     public uint Seed;
     public int Background;
-    public bool AllowPlayerTeleport;
     public bool ShowDisplays;
+    public bool AllowPlayerTeleport;
 
     public override PacketId PacketId => PacketId.MapInfo;
 
@@ -22,29 +21,29 @@ public class MapInfo : IncomingPacket<MapInfo> {
         Height = 0;
         Name = null;
         DisplayName = null;
-        Difficulty = 0;
         Seed = 0;
         Background = 0;
-        AllowPlayerTeleport = false;
         ShowDisplays = false;
+        AllowPlayerTeleport = false;
     }
 
+    //Wire has no difficulty: width, height, name, displayName, seed, background,
+    //showDisplays, allowPlayerTeleport.
     public override void Read(ref SpanReader reader) {
         Width = reader.ReadInt32();
         Height = reader.ReadInt32();
         Name = reader.ReadUTF();
         DisplayName = reader.ReadUTF();
-        Difficulty = reader.ReadInt32();
         Seed = reader.ReadUInt32();
         Background = reader.ReadInt32();
-        AllowPlayerTeleport = reader.ReadBoolean();
         ShowDisplays = reader.ReadBoolean();
+        AllowPlayerTeleport = reader.ReadBoolean();
     }
 
     public override void Handle() {
         Map.Reset();
 
-        Map.InitMap(Width, Height, Name, DisplayName, Difficulty, Seed, Background,
+        Map.InitMap(Width, Height, Name, DisplayName, 0, Seed, Background,
             AllowPlayerTeleport, ShowDisplays);
 
         LoadOrCreate();
@@ -70,6 +69,6 @@ public class MapInfo : IncomingPacket<MapInfo> {
     }
 
     public override string ToString() {
-        return $"Width: {Width}, Height: {Height}, Name: {Name}, DisplayName: {DisplayName}, Difficulty: {Difficulty}, Seed: {Seed}, Background: {Background}, AllowPlayerTeleport: {AllowPlayerTeleport}, ShowDisplays: {ShowDisplays}";
+        return $"Width: {Width}, Height: {Height}, Name: {Name}, DisplayName: {DisplayName}, Seed: {Seed}, Background: {Background}, AllowPlayerTeleport: {AllowPlayerTeleport}, ShowDisplays: {ShowDisplays}";
     }
 }

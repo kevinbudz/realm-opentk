@@ -4,7 +4,7 @@ public class NameResult : IncomingPacket<NameResult> {
     public bool Success;
     public string ErrorText;
 
-    public override PacketId PacketId => PacketId.Unknown;
+    public override PacketId PacketId => PacketId.NameResult;
 
     public override void Reset() {
         Success = false;

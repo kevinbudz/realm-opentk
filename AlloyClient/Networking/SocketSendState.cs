@@ -42,7 +42,8 @@ public class SocketSendState : IDisposable
 
             int bodyStart = start + 5;
 
-            var writer = new SpanWriter(span); // assume you have or can make one
+            //Wire order is big-endian (see RotMG.Networking.PacketReader/Writer on the server).
+            var writer = new SpanWriter(span, false);
             writer.Position = bodyStart;
 
             pkt.Write(ref writer);

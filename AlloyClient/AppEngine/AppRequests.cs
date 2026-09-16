@@ -47,12 +47,16 @@ public static class AppRequests {
             };
         }
 
-        GlobalData.Add(new AccountData(xml));
+        //realm-server /account/verify answers bare <Success/> (no account
+        //body), so there is nothing to parse here. Account/character data
+        //arrives via /char/list below.
         GlobalData.Add(new LoginData(username, password));
-        
+
         if (saveInfo) {
             Settings.SaveLocalAccount();
         }
+
+        await GetCharList();
 
         return new AppResponse { Success = true };
     }
@@ -104,14 +108,27 @@ public static class AppRequests {
         }
         
         var xml = XElement.Parse(response);
-        
+
+        if (xml.Name.LocalName == "Error" || xml.Element("Account") == null) {
+            var message = xml.Value;
+            return new AppResponse { Success = false, Message = string.IsNullOrWhiteSpace(message) ? "Failed to load character list." : message };
+        }
+
         GlobalData.Add(new AccountData(xml.Element("Account")));
         GlobalData.Add(new CharacterListData(xml));
         GlobalData.Add(new NewsData(xml.Elements("NewsItem")));
-        GlobalData.Add(new ServerListData(xml.Element("Servers")));
+        GlobalData.Add(new ServerListData(xml.Element("Servers") ?? DefaultServersXml()));
         
         return new AppResponse{ Success = true };
     }
     
+    //realm-server /char/list carries no Servers element, so fall back to the
+    //configured game endpoint instead of crashing on a missing element.
+    private static XElement DefaultServersXml() => new("Servers",
+        new XElement("Server",
+            new XElement("Name", "Default"),
+            new XElement("DNS", Settings.GameServerAddress),
+            new XElement("Port", Settings.GameServerPort)));
+
     private static Dictionary<string, string> BuildAccountRequestData(string username, string password) => new() {{"username", username}, {"password", password}};
 }

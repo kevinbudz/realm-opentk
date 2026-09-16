@@ -127,7 +127,10 @@ public static class Utils {
         }
     }
     
-    public static int[] FromCommaSepString(this string src, string delim = ", ") {
-        return src == string.Empty ? [] : src.Split(delim).Select(int.Parse).ToArray();
+    public static int[] FromCommaSepString(this string src) {
+        if (string.IsNullOrWhiteSpace(src)) {
+            return [];
+        }
+        return src.Split(',').Select(s => int.Parse(s.Trim())).ToArray();
     }
 }

@@ -21,7 +21,8 @@ public class ServerProjectileProps : IncomingPacket<ServerProjectileProps> {
     public int Size;
     public (ConditionEffect, int)[] Effects;
 
-    public override PacketId PacketId => PacketId.ServerProjectileProps;
+    //Not sent by realm-server (newer-protocol packet); kept unmapped so it is never instantiated.
+    public override PacketId PacketId => PacketId.Unknown;
 
     public override void Reset() {
         ContainerType = 0;

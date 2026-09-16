@@ -37,7 +37,7 @@ public sealed class Character(XElement xml) {
     
     //
 
-    public readonly int CurrentFame = xml.GetValue("Fame", 0);
+    public readonly int CurrentFame = xml.GetValue("CurrentFame", 0);
     
     //
     
@@ -61,9 +61,9 @@ public sealed class Character(XElement xml) {
     
     public readonly int Dexterity = xml.GetValue("Dexterity", 0);
 
-    public readonly int Wisdom = xml.GetValue("Wisdom", 0);
-        
-    public readonly int Speed = xml.GetValue("Wisdom", 0);
-    
-    public readonly int Vitality = xml.GetValue("LifeRegeneration", 0);
+    public readonly int Speed = xml.GetValue("Speed", 0);
+
+    public readonly int Vitality = xml.GetValue("HpRegen", 0);
+
+    public readonly int Wisdom = xml.GetValue("MpRegen", 0);
 }

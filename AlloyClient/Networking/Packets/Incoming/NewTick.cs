@@ -1,4 +1,5 @@
-﻿using AlloyClient.Game;
+﻿using System;
+using AlloyClient.Game;
 using AlloyClient.Networking.Packets.Outgoing;
 using AlloyClient.Networking.Structs.DataObjects;
 using Microsoft.Extensions.Logging;
@@ -34,6 +35,7 @@ public class NewTick : IncomingPacket<NewTick> {
     public override void Handle() {
         if (Map.LocalPlayer != null) {
             var move = Move.CreatePacket();
+            move.Time = Environment.TickCount;
             move.NewPosition = new Position {
                 X = Map.LocalPlayer.Position.X,
                 Y = Map.LocalPlayer.Position.Y

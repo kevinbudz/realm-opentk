@@ -2,24 +2,22 @@
 
 public class AllyShoot : IncomingPacket<AllyShoot> {
 
-    public byte BulletId;
     public int OwnerId;
-    public ushort ContainerType;
+    public short ContainerType;
     public float Angle;
 
-    public override PacketId PacketId => PacketId.Unknown;
+    public override PacketId PacketId => PacketId.AllyShoot;
 
     public override void Reset() {
-        BulletId = 0;
         OwnerId = 0;
         ContainerType = 0;
         Angle = 0;
     }
 
+    //Wire: int ownerId, short containerType, float angle (no bullet id).
     public override void Read(ref SpanReader reader) {
-        BulletId = reader.ReadByte();
         OwnerId = reader.ReadInt32();
-        ContainerType = reader.ReadUInt16();
+        ContainerType = reader.ReadInt16();
         Angle = reader.ReadSingle();
     }
 
@@ -27,6 +25,6 @@ public class AllyShoot : IncomingPacket<AllyShoot> {
     }
 
     public override string ToString() {
-        return $"OwnerId: {OwnerId}, BulletId: {BulletId}, ContainerType: {ContainerType}, Angle: {Angle}";
+        return $"OwnerId: {OwnerId}, ContainerType: {ContainerType}, Angle: {Angle}";
     }
 }

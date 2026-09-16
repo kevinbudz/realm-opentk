@@ -3,7 +3,7 @@
 public class RequestTrade : OutgoingPacket<RequestTrade> {
     public string Name;
 
-    public override PacketId PacketId => PacketId.Unknown;
+    public override PacketId PacketId => PacketId.RequestTrade;
 
     public override void Reset() {
         Name = string.Empty;

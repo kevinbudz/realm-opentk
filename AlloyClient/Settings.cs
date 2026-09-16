@@ -26,11 +26,14 @@ public static class Settings {
     private readonly static string AccountFilePath;
     private readonly static string SettingsFilePath;
 
-    public const string BuildVersion = "0.3.3";
+    //Must match realm-server Settings.xml BuildVersion and realm-client Parameters.BUILD_VERSION.
+    //The game server rejects Hello with FailureIncorrectVersion on mismatch.
+    public const string BuildVersion = "1.0.0";
     public const string BuildLabel = $"Alloy v{BuildVersion}";
 
     public const string AppEngineAddress = "127.0.0.1";
-    public const string AppEnginePort = "8080";
+    //realm-server AppServer listens on Settings.xml Ports[0] (game traffic is Ports[1]).
+    public const string AppEnginePort = "7777";
     public const string AppEngineUrl = $"http://{AppEngineAddress}:{AppEnginePort}";
 
     public const int AppEngineTimeout = 10000;

@@ -348,7 +348,7 @@ public class Entity {
                 case StatsType.Glow:
                     GlowColor = stat.Value;
                     break;
-                case StatsType.AltTextureIndex:
+                case StatsType.AltTexture:
                     SetAltTexture(stat.Value);
                     break;
                 case StatsType.BackPack0:
