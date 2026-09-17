@@ -17,6 +17,8 @@
     <ItemGroup>
         <None Remove="AlloyClient.csproj.DotSettings" />
         <None Include="..\README.md" />
+        <None Remove="Screens\Components\MapBackground.dat" />
+        <EmbeddedResource Include="Screens\Components\MapBackground.dat" />
     </ItemGroup>
     
     <ItemGroup>

@@ -17,6 +17,9 @@ internal static class Program
     public static int Main()
     {
         Run("HP bars keep world size across zoom", HpBarScaleTests.Run);
+        Run("MapBackground embedded map decodes", MapBackgroundDecodeTests.Run);
+        Run("MapBackground camera framing", MapBackgroundCameraTests.Run);
+        Run("MapBackground wall entities", MapBackgroundEntitiesTests.Run);
         Run("DropShadowFilter defaults", Defaults);
         Run("DropShadowFilter normalization", Normalization);
         Run("DropShadowFilter rejects non-finite values", RejectsNonFinite);

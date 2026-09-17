@@ -1,4 +1,5 @@
 ﻿using System;
+using Alloy.Engine;
 using Alloy.UiLib.Core;
 using System.Linq;
 using Alloy.UiLib.BuiltIn;
@@ -31,6 +32,8 @@ public abstract class TitleScreenBase : Screen {
     private const int AccountInfoY = 2;
 
     private readonly ScreenDarkenOverlay _darken = new();
+    private readonly ScreenGraphic _fallbackBackground;
+    private readonly MapBackground _mapBackground = new();
     private readonly TitleMenuRibbon _menuRibbon = new(Settings.DefaultScreenWidth);
 
     private readonly MusicButton _music = new(new MusicButtonConfig { X = MusicX, Y = MusicY, Width = 32, Height = 32 });
@@ -46,10 +49,14 @@ public abstract class TitleScreenBase : Screen {
     protected readonly AccountOverlay Overlay;
 
     protected TitleScreenBase(ScreenType type = ScreenType.Other) {
-        var background = new ScreenGraphic(type == ScreenType.Title);
-        AddChild(background);
+        // Static splash shown until the live map backdrop loads (asset
+        // libraries arrive after the loading screen is already up).
+        _fallbackBackground = new ScreenGraphic(type == ScreenType.Title);
+        AddChild(_fallbackBackground);
 
-        if (type == ScreenType.Other) {
+        // Flash MenuBackground dims every menu over the map. Loading keeps
+        // its undimmed look; everything else gets the dim treatment.
+        if (type != ScreenType.Loading) {
             AddChild(_darken);
         }
 
@@ -84,7 +91,18 @@ public abstract class TitleScreenBase : Screen {
         Stage.RemoveEventListener(ResizeEvent.Resize, OnResize);
     }
 
+    public override void Update(GameTime gameTime) {
+        _mapBackground.Update(gameTime);
+        _fallbackBackground.Visible = !_mapBackground.IsActive;
+    }
+
+    public override void Draw(GameTime gameTime) {
+        _mapBackground.Draw(gameTime);
+    }
+
     protected override void OnResize(ResizeEvent args) {
+        _mapBackground.Resize(args.Width, args.Height);
+
         var scale = Stage.ScreenScale;
 
         _music.X = (int)MathF.Round(MusicX * scale.X);
