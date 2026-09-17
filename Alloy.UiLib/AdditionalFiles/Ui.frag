@@ -97,7 +97,10 @@ float GetOpacityFromDistance(float signedDistance, vec2 Jdx, vec2 Jdy) {
 
     vec2 gradientDistance = SafeNormalize(vec2(dFdx(signedDistance), dFdy(signedDistance)));
     vec2 gradient = vec2(gradientDistance.x * Jdx.x + gradientDistance.y * Jdy.x, gradientDistance.x * Jdx.y + gradientDistance.y * Jdy.y);
-    float scaledDistanceLimit = min(thickness * distanceLimit * length(gradient), 0.5f);
+    // The anisotropic term narrows below a screen pixel when magnified; floor
+    // it at the isotropic width so magnified edges keep a full pixel of AA.
+    float isotropicWidth = 0.5 * length(vec2(dFdx(signedDistance), dFdy(signedDistance)));
+    float scaledDistanceLimit = min(max(thickness * distanceLimit * length(gradient), isotropicWidth), 0.5f);
 
     return smoothstep(-scaledDistanceLimit, scaledDistanceLimit, signedDistance);
 }

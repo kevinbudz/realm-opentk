@@ -5,9 +5,11 @@
     <LangVersion>preview</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <EnablePreviewFeatures>true</EnablePreviewFeatures>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Alloy.UiLib\Alloy.UiLib.csproj" />
+    <ProjectReference Include="..\AlloyClient\AlloyClient.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Alloy.UiLib\Properties\AssemblyInfo.cs" Link="UiLibAssemblyInfo.cs" />

@@ -24,6 +24,10 @@ public static class FlashTextFilters {
     public static DropShadowFilter Default { get; } = new(distance: 0, angle: 0);
     public static DropShadowFilter StrongOutline { get; } = new(distance: 0, angle: 0, strength: 2);
     public static DropShadowFilter Soft { get; } = new(distance: 0, angle: 0, alpha: 0.5f, blurX: 12, blurY: 12);
+    /// <summary>Item-tile tier tag: Flash's <c>GlowFilter(0, 1, 2, 2, 10, 1)</c>
+    /// from <c>ItemTile.setTierTag</c>, i.e. a zero-distance black glow.</summary>
+    public static DropShadowFilter TierTag { get; } = new(distance: 0, angle: 0, color: 0,
+        alpha: 1, blurX: 2, blurY: 2, strength: 10, quality: 1);
 }
 
 /// <summary>

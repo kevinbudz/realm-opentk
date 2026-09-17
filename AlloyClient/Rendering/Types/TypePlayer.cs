@@ -81,27 +81,23 @@ public sealed class TypePlayer : RenderBase {
         Entity.HeightOffset = GetVisibleTopOffset(k);
         
         targets.Add(new VertexObject(Position, UV, Scale, Rotation, Extra, Color));
-        var isLocalPlayer = _player == Map.LocalPlayer;
+        var y = TypeBar.BaseYOffset;
         if (_player != Map.LocalPlayer) {
-            _typeName.Draw(0.1f, targets, time);
+            _typeName.Draw(y, targets, time);
+            y += _typeName.Height;
         }
 
-        var barOffset = TypeBar.BaseYOffsetPixels;
         var drawHealthBar = _player.MaxHp > 0 && TypeHpBar.CanDrawForPlayer(_player);
         if (drawHealthBar) {
-            if (!isLocalPlayer) {
-                barOffset += TypeBar.OtherPlayerYOffsetPixels;
-            }
-
             var maximumHp = Math.Max(_player.MaxHp, _player.Hp);
             _hpBar.SetFill(1f * _player.Hp / maximumHp);
-            _hpBar.Draw(barOffset, targets, time);
-            barOffset += TypeBar.RowSpacingPixels;
+            _hpBar.Draw(y, targets, time);
+            y += _hpBar.Height;
         }
 
         if (Settings.DrawMpBar && _player.MaxMp > 0) {
             _mpBar.SetFill(1f * _player.Mp / _player.MaxMp);
-            _mpBar.Draw(barOffset, targets, time);
+            _mpBar.Draw(y, targets, time);
         }
         
         _effects.Draw(Entity.HeightOffset, targets, time);

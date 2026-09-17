@@ -13,7 +13,7 @@ public class TypeHpBar : SubRenderBase {
     private readonly static Color LowFill = Color.FromHexRGB(0xFF8010);
     private readonly static Color MediumFill = Color.FromHexRGB(0xE01010);
 
-    public override float Height => TypeBar.RowSpacingPixels;
+    public override float Height => TypeBar.RowSpacing;
 
     private readonly Color _backgroundColor = Color.FromHexRGB(0x111111);
     private Vector4 _backgroundScale;
@@ -35,16 +35,10 @@ public class TypeHpBar : SubRenderBase {
     }
 
     public override void Draw(float yOffset, List<VertexObject> targets, double time) {
-        var pixelScale = 1f / (Camera.BaseCameraZoom * Settings.CameraZoom);
-        var halfWidth = TypeBar.HalfWidthPixels * pixelScale;
-        var halfHeight = TypeBar.HeightPixels * 0.5f * pixelScale;
-        var backgroundOffset = TypeBar.BackgroundOffsetPixels * pixelScale;
-        var centerY = (yOffset + TypeBar.HeightPixels * 0.5f) * pixelScale;
-
-        _backgroundScale.X = (halfWidth + backgroundOffset) * 2f;
-        _backgroundScale.Y = (halfHeight + backgroundOffset) * 2f;
+        _backgroundScale.X = TypeBar.BackgroundWidth;
+        _backgroundScale.Y = TypeBar.BackgroundHeight;
         _backgroundScale.Z = 0f;
-        _backgroundScale.W = centerY;
+        _backgroundScale.W = yOffset;
         var backgroundExtra = Extra;
         backgroundExtra.SortId += 0.000001f;
         targets.Add(new VertexObject(Parent.Position, UV, _backgroundScale, Rotation, backgroundExtra, _backgroundColor));
@@ -53,10 +47,10 @@ public class TypeHpBar : SubRenderBase {
             return;
         }
 
-        Scale.X = halfWidth * 2f * _fill;
-        Scale.Y = halfHeight * 2f;
-        Scale.Z = halfWidth * (_fill - 1f);
-        Scale.W = centerY;
+        Scale.X = TypeBar.FullWidth * _fill;
+        Scale.Y = TypeBar.BarHeight;
+        Scale.Z = TypeBar.HalfWidth * (_fill - 1f);
+        Scale.W = yOffset;
         targets.Add(new VertexObject(Parent.Position, UV, Scale, Rotation, Extra, Color));
     }
 

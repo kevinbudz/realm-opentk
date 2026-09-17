@@ -2,7 +2,10 @@ using System.Reflection;
 using OpenTK;
 using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL;
+using Alloy.Common;
 using Alloy.UiLib.Extra;
+using Alloy.UiLib.Rendering;
+using OpenTK.Mathematics;
 
 namespace Alloy.UiLib.Tests;
 
@@ -13,9 +16,12 @@ internal static class Program
 
     public static int Main()
     {
+        Run("HP bars keep world size across zoom", HpBarScaleTests.Run);
         Run("DropShadowFilter defaults", Defaults);
         Run("DropShadowFilter normalization", Normalization);
         Run("DropShadowFilter rejects non-finite values", RejectsNonFinite);
+        Run("Flash tier-tag filter values", TierTagValues);
+        Run("Mask scale quantization", MaskScaleQuantization);
         Run("EGL surfaceless context", EglBootstrap);
         Run("Text filter GPU pixel regression suite", GpuPixels);
 
@@ -88,6 +94,57 @@ internal static class Program
         Throws<ArgumentOutOfRangeException>(() => new DropShadowFilter(distance: float.NaN));
         Throws<ArgumentOutOfRangeException>(() => new DropShadowFilter(angle: float.PositiveInfinity));
         Throws<ArgumentOutOfRangeException>(() => new DropShadowFilter(alpha: float.NegativeInfinity));
+    }
+
+    private static void TierTagValues()
+    {
+        // Flash ItemTile.setTierTag applies GlowFilter(0, 1, 2, 2, 10, 1):
+        // a zero-distance black glow, blur 2, strength 10, quality 1.
+        var f = AlloyClient.Ui.Flash.FlashTextFilters.TierTag;
+        Equal(0f, f.Distance);
+        Equal(0u, f.Color);
+        Equal(1f, f.Alpha);
+        Equal(2f, f.BlurX);
+        Equal(2f, f.BlurY);
+        Equal(10f, f.Strength);
+        Equal(1, f.Quality);
+        Equal(false, f.Inner);
+        Equal(false, f.Knockout);
+        Equal(false, f.HideObject);
+    }
+
+    private static void MaskScaleQuantization()
+    {
+        static SpriteInstanceData Identity() => new(new SpriteVertexMatrix(new Vector4(1, 0, 0, 0), new Vector4(0, 1, 0, 0)),
+            Color.White, Color.Black, Vector2.Zero, Vector4.Zero, Vector4.Zero, Vector4.Zero, ColorTransform.Default);
+        Equal(new Vector2(1, 1), TextFilterRender.QuantizedMaskScale(Identity()));
+        var scaled = Identity();
+        scaled.TransformX = new Vector4(2, 0, 0, 0);
+        scaled.TransformY = new Vector4(0, 2, 0, 0);
+        Equal(new Vector2(2, 2), TextFilterRender.QuantizedMaskScale(scaled));
+        var fractional = Identity();
+        fractional.TransformX = new Vector4(1.1f, 0, 0, 0);
+        fractional.TransformY = new Vector4(0, 1.1f, 0, 0);
+        Equal(new Vector2(1.25f, 1.25f), TextFilterRender.QuantizedMaskScale(fractional));
+        var small = Identity();
+        small.TransformX = new Vector4(0.5f, 0, 0, 0);
+        small.TransformY = new Vector4(0, 0.5f, 0, 0);
+        Equal(new Vector2(1, 1), TextFilterRender.QuantizedMaskScale(small));
+        var huge = Identity();
+        huge.TransformX = new Vector4(10, 0, 0, 0);
+        huge.TransformY = new Vector4(0, 10, 0, 0);
+        Equal(new Vector2(4, 4), TextFilterRender.QuantizedMaskScale(huge));
+        var moved = Identity();
+        moved.TransformX = new Vector4(1, 0, 100, 0);
+        moved.TransformY = new Vector4(0, 1, -50, 0);
+        Equal(new Vector2(1, 1), TextFilterRender.QuantizedMaskScale(moved));
+        var rotated = Identity();
+        rotated.TransformX = new Vector4(0, -2, 0, 0);
+        rotated.TransformY = new Vector4(2, 0, 0, 0);
+        Equal(new Vector2(2, 2), TextFilterRender.QuantizedMaskScale(rotated));
+        var broken = Identity();
+        broken.TransformX = new Vector4(float.NaN, 0, 0, 0);
+        Equal(new Vector2(1, 1), TextFilterRender.QuantizedMaskScale(broken));
     }
 
     private static void GpuPixels()

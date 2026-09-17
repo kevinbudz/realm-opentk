@@ -11,7 +11,7 @@ using AlloyClient.Ui.Flash;
 namespace AlloyClient.Game.Components.Hud;
 
 public sealed class CharacterDetails : Sprite {
-    
+
     private readonly ObjectRect _skin;
     private readonly SimpleText _name;
 
@@ -30,7 +30,7 @@ public sealed class CharacterDetails : Sprite {
             FontType = FontType.Bold,
             // Y=3 confirmed against Flash reference slice.
             X = 37,
-            Y = 3,
+            Y = 5,
             Color = 0xB3B3B3,
             DropShadow = FlashTextFilters.Default
         });
@@ -53,7 +53,7 @@ public sealed class CharacterDetails : Sprite {
             OverlayManager.Set(new OptionsView());
         });
         AddChild(options);
-        
+
         Map.OnPlayerUpdate.Add(OnPlayerUpdate);
     }
 

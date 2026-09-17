@@ -79,7 +79,7 @@ public sealed class TypeGameObject : RenderBase {
         if (TypeHpBar.CanDrawForGameObject(Entity)) {
             var maximumHp = Math.Max(Entity.MaxHp, Entity.Hp);
             _hpBar.SetFill(1f * Entity.Hp / maximumHp);
-            _hpBar.Draw(TypeBar.BaseYOffsetPixels, targets, time);
+            _hpBar.Draw(TypeBar.BaseYOffset, targets, time);
         }
         
         _effects.Draw(Entity.HeightOffset, targets, time);

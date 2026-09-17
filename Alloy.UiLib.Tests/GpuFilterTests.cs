@@ -15,6 +15,7 @@ internal static class GpuFilterTests {
     private static readonly ushort[] Indices = [0, 1, 2, 0, 2, 3];
     private static int _target, _framebuffer;
     private static SpriteInstanceData _instance;
+    private static Sampler? _glyphSampler;
 
     internal static void Run() {
         var source = (ShaderSource)typeof(UiRender).GetProperty("UiShaderSource", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
@@ -23,6 +24,7 @@ internal static class GpuFilterTests {
         SpriteRender.Init();
         using var glyph = new Texture(new Color[] { Color.White }, 1, 1);
         using var sampler = new Sampler(glyph, TextureFilter.Linear, 6);
+        _glyphSampler = sampler;
         UiRender.UiShader.SetValue("TextTexture", sampler);
         UiRender.UiShader.SetValue("TextTextureSize", Vector2.One);
         UiRender.UiShader.SetValue("PixelRange", 4f);
@@ -53,6 +55,9 @@ internal static class GpuFilterTests {
             AlphaAndTintReuse();
             ClippingAndState();
             GeometryInvalidation();
+            ScaledMaskStaysSharp();
+            FilteredBodyMatchesDirectText();
+            SmallTextKeepsAntialiasedFringe();
             LongGeometry();
             CacheEviction();
             TextPreview.Render();
@@ -145,6 +150,127 @@ internal static class GpuFilterTests {
         var after = Draw(filter, owner, revision: 2, geometry: Quad(36, 20));
         Check(A(after, 24, 24) == 0 && A(after, 40, 24) > 250, "geometry revision rerasterizes mask");
         Console.WriteLine("  GPU PASS cached transforms and geometry invalidation");
+    }
+
+    private static void ScaledMaskStaysSharp() {
+        var owner = new object();
+        var filter = new DropShadowFilter(0, 0, alpha: 0, blurX: 0, blurY: 0, quality: 0);
+        Draw(filter, owner);
+        var scaled = _instance;
+        scaled.TransformX = new Vector4(2, 0, 0, 0);
+        scaled.TransformY = new Vector4(0, 2, 0, 0);
+        var pixels = Draw(filter, owner, instance: scaled);
+        // Design body spans 20..28 with a 2px pad (origin 18), so at 2x the left
+        // edge lands on screen x=40. A design-resolution mask stretches that step
+        // over ~2 screen pixels; a scale-aware mask keeps it within one.
+        var outside = A(pixels, 39, 48);
+        var inside = A(pixels, 40, 48);
+        Check(outside == 0 && inside > 250,
+            $"scaled body edge stays sharp (outside={outside} inside={inside})");
+        Console.WriteLine("  GPU PASS scaled mask resolution");
+    }
+
+    // The filter body must be pixel-identical to unfiltered MSDF text: a blurred
+    // halo behind the glyphs is fine, but the glyph cores and AA fringe must not
+    // be baked through the low-resolution coverage mask.
+    private static void FilteredBodyMatchesDirectText() {
+        const int W = 8, H = 8;
+        var ramp = new Color[W * H];
+        for (var y = 0; y < H; y++)
+            for (var x = 0; x < W; x++) {
+                var v = x * 255 / (W - 1);
+                ramp[y * W + x] = new Color(v, v, v);
+            }
+        using var texture = new Texture(ramp.AsSpan(), W, H);
+        using var sampler = new Sampler(texture, TextureFilter.Linear, 6);
+        UiRender.UiShader.SetValue("TextTexture", sampler);
+        UiRender.UiShader.SetValue("TextTextureSize", new Vector2(W, H));
+        try {
+            // Shadow parked far away with zero alpha so only the body is measured.
+            var filter = new DropShadowFilter(12, 0, alpha: 0, blurX: 0, blurY: 0, quality: 0);
+            var shifted = _instance;
+            shifted.TransformX = new Vector4(1, 0, 0.5f, 0);
+            CheckBodyMatches(filter, _instance, "aligned");
+            CheckBodyMatches(filter, shifted, "half-pixel offset");
+        } finally {
+            // SetValue only writes the uniform; re-bind or unit 6 keeps the
+            // deleted gradient texture for every later text draw.
+            _glyphSampler!.Bind(6);
+            UiRender.UiShader.SetValue("TextTexture", _glyphSampler);
+            UiRender.UiShader.SetValue("TextTextureSize", Vector2.One);
+        }
+        Console.WriteLine("  GPU PASS filtered body matches direct text");
+    }
+
+    private static void CheckBodyMatches(DropShadowFilter filter, SpriteInstanceData instance, string name) {
+        var direct = DirectDraw(instance);
+        var filtered = Draw(filter, new object(), instance: instance);
+        var worst = 0;
+        var at = -1;
+        for (var x = 18; x <= 30; x++) {
+            var diff = Math.Abs((int)A(direct, x, 24) - A(filtered, x, 24));
+            if (diff > worst) {
+                worst = diff;
+                at = x;
+            }
+        }
+        Check(worst <= 2, $"filtered body matches direct text ({name}): max alpha diff {worst} at x={at}");
+    }
+
+    // Small (<16pt) labels use the anisotropic MSDF path while larger ones use
+    // the plain path; both contractually antialias over one screen pixel. A
+    // magnified SDF ramp must therefore render the same through either mode.
+    private static void SmallTextKeepsAntialiasedFringe() {
+        // SDF-correct ramp: distance spans [-0.5, 0.5] over PixelRange texels
+        // (slope 1/4 per texel), like a real MSDF atlas with PixelRange 4.
+        const int W = 8, H = 8, Range = 4;
+        var ramp = new Color[W * H];
+        for (var y = 0; y < H; y++)
+            for (var x = 0; x < W; x++) {
+                var v = Math.Clamp((int)((x - 3.5) / Range * 255 + 127.5), 0, 255);
+                ramp[y * W + x] = new Color(v, v, v);
+            }
+        using var texture = new Texture(ramp.AsSpan(), W, H);
+        using var sampler = new Sampler(texture, TextureFilter.Linear, 6);
+        UiRender.UiShader.SetValue("TextTexture", sampler);
+        UiRender.UiShader.SetValue("TextTextureSize", new Vector2(W, H));
+        try {
+            // 2x scale, rotated 30 degrees about the quad center, kept on target.
+            var small = _instance;
+            small.Extra1 = new Vector4(0, 1, 0, 0);
+            small.TransformX = new Vector4(1.7320508f, -1, 14.4f, 0);
+            small.TransformY = new Vector4(1, 1.7320508f, -33.6f, 0);
+            var pixels = DirectDraw(small);
+            var normal = small;
+            normal.Extra1 = new Vector4(0, 0, 0, 0);
+            var refPixels = DirectDraw(normal);
+            var worst = 0;
+            var atX = -1;
+            var atY = -1;
+            for (var y = 20; y <= 44; y++)
+                for (var x = 12; x <= 52; x++) {
+                    var diff = Math.Abs((int)A(pixels, x, y) - A(refPixels, x, y));
+                    if (diff > worst) {
+                        worst = diff;
+                        atX = x;
+                        atY = y;
+                    }
+                }
+            Check(worst <= 65, $"small text matches normal AA when magnified (max diff {worst} at ({atX},{atY}))");
+        } finally {
+            _glyphSampler!.Bind(6);
+            UiRender.UiShader.SetValue("TextTexture", _glyphSampler);
+            UiRender.UiShader.SetValue("TextTextureSize", Vector2.One);
+        }
+        Console.WriteLine("  GPU PASS small-text AA fringe under magnification");
+    }
+
+    private static byte[] DirectDraw(SpriteInstanceData instance, VertexUi[]? geometry = null) {
+        Clear();
+        SpriteRender.StartDraw();
+        SpriteRender.Draw(instance, Indices, geometry ?? Quad(20, 20));
+        SpriteRender.EndDraw();
+        return Read();
     }
 
     private static void LongGeometry() {

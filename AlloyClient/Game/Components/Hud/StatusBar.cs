@@ -35,7 +35,7 @@ public class StatusBar : Sprite {
         labelString = label;
         _label = CreateText(label);
         AddChild(_label);
-        
+
         _valueText = CreateText("");
         AddChild(_valueText);
 
@@ -67,8 +67,8 @@ public class StatusBar : Sprite {
         FontSize = 14,
         FontType = FontType.Bold,
         DropShadow = FlashTextFilters.Default,
-        X = 1,
-        Y = 1,
+        X = 3,
+        Y = 2,
         Color = 0xFFFFFF
     });
 
@@ -84,7 +84,7 @@ public class StatusBar : Sprite {
         }
 
         _textState = newState;
-        
+
         var ltmt = "";
 
         if (Settings.ToggleLeftToMax) {
@@ -98,8 +98,9 @@ public class StatusBar : Sprite {
         else
             _valueText.SetText($"{val}");
         // Flash centers valueText_.width (tight + 4px gutter) while Alloy
-        // centers tight bounds, so shift left 2px to align glyph centers.
-        _valueText.X = _width / 2 - _valueText.Width / 2 - 2;
+        // centers tight bounds (previously compensated with - 2); the whole
+        // label is nudged right 2px, which absorbs that compensation.
+        _valueText.X = _width / 2 - _valueText.Width / 2;
     }
 
     private void OnMouseOver() => _mouseOver = true;

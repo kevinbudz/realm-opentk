@@ -11,6 +11,7 @@ using Alloy.UiLib.Core;
 using Alloy.UiLib.Extra;
 using AlloyClient.Utils;
 using AlloyClient.Ui;
+using AlloyClient.Ui.Flash;
 using OpenTK.Mathematics;
 
 namespace AlloyClient.Game.Components.Hud.Inventory;
@@ -85,12 +86,12 @@ public sealed class ItemTile : Sprite {
         _sprite = new ObjectRect(new ObjectRectConfig {Texture = TextureHelper.FromGameAtlas(0x0096), Width = Size, Height = Size});
         AddChild(_sprite);
 
-        _tierText = new SimpleText(new TextConfig {FontSize = 12, FontType = FontType.Bold, Text = "", OutlineThickness = 1});
+        _tierText = new SimpleText(new TextConfig {FontSize = 12, FontType = FontType.Bold, Text = "", DropShadow = FlashTextFilters.TierTag});
         _tierText.Visible = false;
         _tierText.SetAnchor(UiAnchor.RightBottom);
         // Flash tier sits at y=24 (HEIGHT/2+4) with glyph bottoms ~40.
         // Y=43 lands Alloy bottom-anchored glyphs within 1px of that.
-        _tierText.X = Size;
+        _tierText.X = Size - 1;
         _tierText.Y = Size + 3;
         AddChild(_tierText);
 
@@ -261,7 +262,7 @@ public sealed class ItemTile : Sprite {
 
         RemoveChild(_sprite);
         RemoveChild(_tierText);
-        
+
         _sprite.Scale = Stage.ScreenScale;
         _sprite.StartDrag();
         _sprite.AddEventListener(MouseEvent.LeftUp, OnEndDrag);

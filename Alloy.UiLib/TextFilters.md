@@ -47,27 +47,38 @@ counts use `StrongOutline`, and menu text uses `Soft`.
 ## Rendering and limits
 
 The MTSDF atlas still supplies glyph coverage. Filtered text rasterizes that
-coverage into a padded mask for the complete text run, blurs it horizontally and
-vertically, and composites the body and shadow in premultiplied space before
-returning straight alpha to the existing UI blend state. This avoids atlas-cell
-clipping and lets adjacent glyph shadows blend before applying strength. The
-filter color is independent of text color. Sprite/parent alpha and color
-transforms apply to the finished result.
+coverage into a padded mask for the complete text run and blurs it horizontally
+and vertically for the halo. Outer filters (every client use: `Default`,
+`StrongOutline`, `Soft`) then draw the halo from the mask and the glyph run
+itself through the normal MSDF path, composited shadow-behind over two passes;
+this equals the old premultiplied composite, but glyph edges and AA match
+unfiltered text exactly at any placement or magnification. This avoids
+atlas-cell clipping and lets adjacent glyph shadows blend before applying
+strength. The filter color is independent of text color. Sprite/parent alpha
+and color transforms apply to the finished result; an explicit filter still
+takes precedence over the legacy outline/glow.
 
-Masks are cached by owner, geometry revision, and filter value. Repositioning,
-recoloring, and fading do not regenerate them. The cache evicts least recently
-used entries at 128 labels or 32 MiB, and disposes GPU textures on eviction,
-font replacement, and UI shutdown. Filter draws flush the UI batch; cache misses
-also incur mask and blur passes. Texture units 14 and 15 are reserved for this
-renderer. Very large masks exceeding the GPU texture limit or the 32 MiB budget
-are rejected with an explanatory exception.
+Masks are cached by owner, geometry revision, filter value, and quantized
+world scale. Repositioning, recoloring, and fading do not regenerate them;
+resizing the window or otherwise magnifying the label does, so a magnified
+halo keeps roughly one mask texel per screen pixel. The scale is measured
+from the sprite's world transform, rounded up to quarter steps, clamped to
+1–4×, and applied per axis; blur radii, offsets, and the final quad stay in
+local design pixels. The cache evicts least recently used entries at
+128 labels or 32 MiB (counted at supersampled size), and disposes GPU textures
+on eviction, font replacement, and UI shutdown. Filter draws flush the UI
+batch; cache misses also incur mask and blur passes. Texture units 14 and 15
+are reserved for this renderer. Very large masks exceeding the GPU texture
+limit or the 32 MiB budget are rejected with an explanatory exception.
 
 This is a Flash-style implementation, not a pixel-identical Flash emulator.
 Rasterization uses the current font atlas, and overlapping glyph coverage uses
-the maximum coverage. Masks are generated at local design resolution and scale
-and rotate with the sprite; large magnifications can soften the text. Flash's
-filter transformation rules and exact blur rounding differ. For large text,
-prefer increasing `FontSize` over magnifying a small filtered label.
+the maximum coverage. Masks scale and rotate with the sprite. Labels under
+16pt use the anisotropic MSDF path, whose smoothing width is floored at one
+screen pixel so magnified small text keeps full antialiasing instead of
+thinning into stairs. Flash's filter transformation rules and exact blur
+rounding differ. For large text, prefer increasing `FontSize` over magnifying
+a small filtered label.
 
 API reference: [AIR DropShadowFilter](https://airsdk.dev/reference/actionscript/3.0/flash/filters/DropShadowFilter.html).
 

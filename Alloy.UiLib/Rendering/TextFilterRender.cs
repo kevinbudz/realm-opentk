@@ -8,13 +8,20 @@ using OpenTK.Mathematics;
 namespace Alloy.UiLib.Rendering;
 
 /// <summary>
-/// Rasterizes the complete text run before filtering. Masks use local design pixels;
-/// movement, tint, alpha and the stage transform do not cause another rasterization.
+/// Rasterizes the complete text run before filtering. Masks are supersampled by the
+/// quantized world scale so a magnified halo keeps ~1 texel per screen pixel;
+/// movement, tint and alpha alone do not cause another rasterization. Outer
+/// filters draw the halo from the mask and the body through the normal MSDF
+/// path, so glyph edges match unfiltered text exactly.
 /// Texture units 14 and 15 are reserved while this renderer is drawing.
 /// </summary>
 internal static class TextFilterRender {
     private const int MaxEntries = 128;
     private const long MaxCacheBytes = 32 * 1024 * 1024;
+    // Supersample bucket: quarters are exactly representable, capped to bound memory.
+    private const float MinMaskScale = 1f;
+    private const float MaxMaskScale = 4f;
+    private const float MaskScaleStep = 0.25f;
     private static readonly ConditionalWeakTable<object, Entry> Cache = new();
     private static readonly List<Entry> Entries = new();
     private static long _clock;
@@ -22,14 +29,15 @@ internal static class TextFilterRender {
     private static readonly ushort[] QuadIndices = [0, 1, 2, 0, 2, 3];
 
     private sealed class Entry : IDisposable {
-        public int Revision, IndexCount, Width, Height;
+        public int Revision, IndexCount, Width, Height, TexWidth, TexHeight;
         public float TextMode;
+        public float ScaleX = MinMaskScale, ScaleY = MinMaskScale;
         public DropShadowFilter Filter;
         public WeakReference<object> Owner;
         public int Body, Shadow;
         public long Used;
         public Vector2 Origin;
-        public long Bytes => (long)Width * Height * 4; // Two R16F textures.
+        public long Bytes => (long)TexWidth * TexHeight * 4; // Two R16F textures.
         public void Dispose() {
             if (Body != 0) GL.DeleteTexture(Body);
             if (Shadow != 0) GL.DeleteTexture(Shadow);
@@ -45,14 +53,16 @@ internal static class TextFilterRender {
         for (var i = Entries.Count - 1; i >= 0; i--) {
             if (!Entries[i].Owner.TryGetTarget(out _)) Remove(null, Entries[i]);
         }
+        var maskScale = QuantizedMaskScale(instance);
         if (Cache.TryGetValue(owner, out var entry) &&
             (entry.Revision != revision || entry.IndexCount != indices.Length ||
-             entry.Filter != filter || entry.TextMode != instance.Extra1.Y)) {
+             entry.Filter != filter || entry.TextMode != instance.Extra1.Y ||
+             entry.ScaleX != maskScale.X || entry.ScaleY != maskScale.Y)) {
             Remove(owner, entry);
             entry = null;
         }
         if (entry == null) {
-            entry = Build(revision, filter, instance, indices, vertices);
+            entry = Build(revision, filter, instance, indices, vertices, maskScale);
             while (Entries.Count >= MaxEntries || _cacheBytes + entry.Bytes > MaxCacheBytes) EvictOldest();
             entry.Owner = new WeakReference<object>(owner);
             Cache.Add(owner, entry);
@@ -65,12 +75,39 @@ internal static class TextFilterRender {
         GL.BindSampler(14, 0);
         GL.BindSampler(15, 0);
         var angle = filter.Angle * MathF.PI / 180f;
-        instance.Info.X = 10;
         // DropShadowFilter.Color is Flash RGB, while the UI packs ABGR.
-        instance.ColorOverride = 0xff000000u | (filter.Color & 0xff) << 16 |
+        var shadowPacked = 0xff000000u | (filter.Color & 0xff) << 16 |
             (filter.Color & 0xff00) | (filter.Color >> 16 & 0xff);
-        instance.Extra1 = new Vector4(MathF.Cos(angle) * filter.Distance / entry.Width,
+        var offset = new Vector4(MathF.Cos(angle) * filter.Distance / entry.Width,
             MathF.Sin(angle) * filter.Distance / entry.Height, filter.Alpha, filter.Strength);
+        if (!filter.Inner && !filter.Knockout && !filter.HideObject) {
+            // Outer filters (every client use) draw the blurred halo from the mask,
+            // then the glyph run itself through the normal MSDF path. Shadow-behind
+            // composited via source-over equals the old premultiplied composite,
+            // but the body keeps per-screen-pixel anti-aliasing instead of a
+            // resampled mask: fractional and magnified placements stay sharp.
+            var shadow = instance;
+            shadow.Info.X = 10;
+            shadow.ColorOverride = shadowPacked;
+            shadow.Extra1 = offset;
+            shadow.Extra2 = new Vector4(0, 0, 1, 0); // Halo only; the body draws next.
+            Span<VertexUi> halo = stackalloc VertexUi[4];
+            MakeQuad(halo, entry.Origin, entry.Width, entry.Height);
+            SpriteRender.Draw(shadow, QuadIndices, halo);
+            SpriteRender.Flush();
+            var body = instance;
+            // The MSDF body path fades via Info.Y but leaves instance-color alpha
+            // to the caller, while the mask path baked it into coverage. Fold it
+            // here so tinting and fading stay identical to the old composite.
+            body.Info = new Vector2(body.Info.X, body.Info.Y * ((body.Color >> 24 & 0xff) / 255f));
+            body.Extra1 = new Vector4(0, body.Extra1.Y, body.Extra1.Z, body.Extra1.W);
+            SpriteRender.Draw(body, indices, vertices);
+            SpriteRender.Flush();
+            return;
+        }
+        instance.Info.X = 10;
+        instance.ColorOverride = shadowPacked;
+        instance.Extra1 = offset;
         instance.Extra2 = new Vector4(filter.Inner ? 1 : 0, filter.Knockout ? 1 : 0, filter.HideObject ? 1 : 0, 0);
         Span<VertexUi> quad = stackalloc VertexUi[4];
         MakeQuad(quad, entry.Origin, entry.Width, entry.Height);
@@ -78,8 +115,25 @@ internal static class TextFilterRender {
         SpriteRender.Flush();
     }
 
+    internal static Vector2 QuantizedMaskScale(SpriteInstanceData instance) {
+        // Local X (1,0) maps to world (M11,M21); local Y (0,1) maps to (M12,M22).
+        var sx = MathF.Sqrt(instance.TransformX.X * instance.TransformX.X +
+            instance.TransformY.X * instance.TransformY.X);
+        var sy = MathF.Sqrt(instance.TransformX.Y * instance.TransformX.Y +
+            instance.TransformY.Y * instance.TransformY.Y);
+        return new Vector2(QuantizeScale(sx), QuantizeScale(sy));
+    }
+
+    private static float QuantizeScale(float scale) {
+        if (!float.IsFinite(scale) || scale <= MinMaskScale) return MinMaskScale;
+        if (scale >= MaxMaskScale) return MaxMaskScale;
+        // Round up so the mask never undersamples the screen.
+        var quantized = MathF.Ceiling(scale / MaskScaleStep) * MaskScaleStep;
+        return Math.Clamp(quantized, MinMaskScale, MaxMaskScale);
+    }
+
     private static Entry Build(int revision, DropShadowFilter filter, SpriteInstanceData source,
-        ReadOnlySpan<ushort> indices, ReadOnlySpan<VertexUi> vertices) {
+        ReadOnlySpan<ushort> indices, ReadOnlySpan<VertexUi> vertices, Vector2 maskScale) {
         var minimum = new Vector2(float.PositiveInfinity);
         var maximum = new Vector2(float.NegativeInfinity);
         foreach (var index in indices) {
@@ -96,13 +150,17 @@ internal static class TextFilterRender {
         var origin = new Vector2(MathF.Floor(minimum.X - padX), MathF.Floor(minimum.Y - padY));
         var widthF = MathF.Ceiling(maximum.X + padX - origin.X);
         var heightF = MathF.Ceiling(maximum.Y + padY - origin.Y);
+        var texWidthF = MathF.Ceiling(widthF * maskScale.X);
+        var texHeightF = MathF.Ceiling(heightF * maskScale.Y);
         GL.GetInteger(GetPName.MaxTextureSize, out int maxTexture);
         if (!float.IsFinite(widthF) || !float.IsFinite(heightF) || widthF < 1 || heightF < 1 ||
-            widthF > maxTexture || heightF > maxTexture || widthF * heightF * 4 > MaxCacheBytes)
+            texWidthF > maxTexture || texHeightF > maxTexture || texWidthF * texHeightF * 4 > MaxCacheBytes)
             throw new InvalidOperationException("Filtered text exceeds the GPU texture size or 32 MiB mask budget. Split the text into smaller elements or reduce its blur/distance.");
         var entry = new Entry {
             Revision = revision, IndexCount = indices.Length, Filter = filter, TextMode = source.Extra1.Y,
-            Origin = origin, Width = (int)widthF, Height = (int)heightF
+            Origin = origin, Width = (int)widthF, Height = (int)heightF,
+            TexWidth = (int)texWidthF, TexHeight = (int)texHeightF,
+            ScaleX = maskScale.X, ScaleY = maskScale.Y
         };
         GL.GetInteger(GetPName.DrawFramebufferBinding, out int framebuffer);
         Span<int> viewport = stackalloc int[4];
@@ -114,12 +172,14 @@ internal static class TextFilterRender {
         var fbo = 0;
         var temporary = 0;
         try {
-            entry.Body = CreateMask(entry.Width, entry.Height);
-            entry.Shadow = CreateMask(entry.Width, entry.Height);
-            temporary = CreateMask(entry.Width, entry.Height);
+            entry.Body = CreateMask(entry.TexWidth, entry.TexHeight);
+            entry.Shadow = CreateMask(entry.TexWidth, entry.TexHeight);
+            temporary = CreateMask(entry.TexWidth, entry.TexHeight);
             fbo = GL.CreateFramebuffer();
             GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, fbo);
-            GL.Viewport(0, 0, entry.Width, entry.Height);
+            // Viewport sets texel density; the view matrix below still spans the
+            // design extent so blur radii and UV offsets stay in design pixels.
+            GL.Viewport(0, 0, entry.TexWidth, entry.TexHeight);
             GL.Disable(EnableCap.ScissorTest);
             GL.Enable(EnableCap.Blend);
             // MAX merges glyph coverage without squaring alpha or darkening overlaps.
