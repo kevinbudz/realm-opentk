@@ -136,6 +136,7 @@ public static class Settings {
     public readonly static ValueSetting<bool> PlayMaster = new(true);
     public readonly static ValueSetting<bool> PlayMusic = new(true);
     public readonly static ValueSetting<bool> PlaySfx = new(true);
+    public readonly static ValueSetting<bool> PlayPewPew = new(true);
     
     // Chat
     public readonly static ValueSetting<int> ChatInclude = new(0);

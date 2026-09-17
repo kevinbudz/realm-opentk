@@ -11,6 +11,7 @@ using AlloyClient.Game;
 using AlloyClient.Screens.Components.CharacterSelection;
 using AlloyClient.Ui;
 using AlloyClient.Ui.Components.Buttons;
+using AlloyClient.Ui.Components.Graphics;
 using AlloyClient.Ui.Components.Scrollbars;
 using AlloyClient.Utils;
 
@@ -41,12 +42,9 @@ public sealed class ClassContainer : Container {
     private const int ClassPitch = 140;
     private const int ClassGridX = 50;
     private const int ClassGridY = 88;
-    private const int ClassBackY = 524;
 
     // Flash CharacterSkinView buttons.
-    private const int PlayButtonY = 520;
     private const int DetailBackX = 30;
-    private const int DetailBackY = 534;
 
     private readonly Container _classScreen;
     private readonly Container _detailScreen;
@@ -108,7 +106,7 @@ public sealed class ClassContainer : Container {
             _classScreen.AddChild(card);
         }
 
-        // Flash: "back" 36pt, centered, top edge at y = 524.
+        // Menu buttons are vertically centered on the menu ribbon, like TitleScreen.
         _classScreen.AddChild(new MenuBarButton(new TextButtonConfig {
             Text = "back",
             FontSize = 36,
@@ -116,8 +114,8 @@ public sealed class ClassContainer : Container {
             OutlineThickness = 4,
             OnClicked = _onBack,
             X = _screenWidth / 2,
-            Y = ClassBackY,
-            Anchor = UiAnchor.MiddleTop
+            Y = TitleMenuRibbon.MenuCenterY,
+            Anchor = UiAnchor.Middle
         }));
     }
 
@@ -333,7 +331,7 @@ public sealed class ClassContainer : Container {
     }
 
     private void BuildDetailNavigation() {
-        // Flash: "back" 22pt at (30, 534), "play" 36pt centered at y = 520.
+        // Menu buttons are vertically centered on the menu ribbon, like TitleScreen.
         _detailScreen.AddChild(new MenuBarButton(new TextButtonConfig {
             Text = "back",
             FontSize = 22,
@@ -341,8 +339,8 @@ public sealed class ClassContainer : Container {
             OutlineThickness = 4,
             OnClicked = ShowClassScreen,
             X = DetailBackX,
-            Y = DetailBackY,
-            Anchor = UiAnchor.LeftTop
+            Y = TitleMenuRibbon.MenuCenterY,
+            Anchor = UiAnchor.MiddleLeft
         }));
 
         _detailScreen.AddChild(new MenuBarButton(new TextButtonConfig {
@@ -352,8 +350,8 @@ public sealed class ClassContainer : Container {
             OutlineThickness = 4,
             OnClicked = Play,
             X = _screenWidth / 2,
-            Y = PlayButtonY,
-            Anchor = UiAnchor.MiddleTop
+            Y = TitleMenuRibbon.MenuCenterY,
+            Anchor = UiAnchor.Middle
         }));
     }
 

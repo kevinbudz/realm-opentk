@@ -29,8 +29,11 @@ public class MusicButton : UiElement {
 
     public MusicButton(MusicButtonConfig config) {
         _state = Settings.PlayMusic.Value;
-        _musicOn = TextureHelper.FromGameAtlas("lofiInterfaceBig", 3, 4);
-        _musicOff = TextureHelper.FromGameAtlas("lofiInterfaceBig", 4, 4);
+        // Flash SoundIcon draws the full 16px tile at 2x (32px box). Removing
+        // only the 1px atlas padding reproduces that tile; removing more
+        // crops into the glyph and magnifies it.
+        _musicOn = TextureHelper.FromGameAtlas("lofiInterfaceBig", 3, false);
+        _musicOff = TextureHelper.FromGameAtlas("lofiInterfaceBig", 4, false);
 
         var iconConfig = new IconButtonConfig { Texture = _state ? _musicOn : _musicOff, Width = config.Width, Height = config.Height, OnClick = OnClick, Alpha = config.Alpha, Anchor = config.Anchor, GameObjectShade = false };
         _button = new IconButton(iconConfig);

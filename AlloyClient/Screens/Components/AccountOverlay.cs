@@ -41,16 +41,16 @@ public class AccountOverlay : Sprite {
     private void CreateLogin() {
         _container.RemoveChildren();
 
-        var newConfig = new TextConfig { Text = "new account", FontSize = 24, FontType = FontType.Normal, Color = 0xB3B3B3 };
+        var newConfig = new TextConfig { Text = "new account", FontSize = 18, FontType = FontType.Normal, Color = 0xB3B3B3 };
         var newText = new SimpleText(newConfig);
         _container.AddChild(newText);
 
-        var newDashConfig = new TextConfig { Text = "-", FontSize = 24, X = newText.Width + LinkSpacing, Color = 0xB3B3B3 };
+        var newDashConfig = new TextConfig { Text = "-", FontSize = 18, X = newText.Width + LinkSpacing, Color = 0xB3B3B3 };
         var newDashText = new SimpleText(newDashConfig);
         _container.AddChild(newDashText);
 
         var registerConfig = new TextButtonConfig {
-            Text = "register", FontSize = 24, OnClicked = () => OverlayManager.Set(new RegisterContainer()), FontType = FontType.Bold,
+            Text = "register", FontSize = 18, OnClicked = () => OverlayManager.Set(new RegisterContainer()), FontType = FontType.Bold,
             X = newDashText.X + newDashText.Width + LinkSpacing
         };
 
@@ -58,13 +58,13 @@ public class AccountOverlay : Sprite {
         _container.AddChild(registerButton);
 
         var dashConfig = new TextConfig
-            { Text = "-", FontSize = 24, X = registerButton.X + registerButton.Width + LinkSpacing, Color = 0xB3B3B3 };
+            { Text = "-", FontSize = 18, X = registerButton.X + registerButton.Width + LinkSpacing, Color = 0xB3B3B3 };
 
         var dashText = new SimpleText(dashConfig);
         _container.AddChild(dashText);
 
         var loginConfig = new TextButtonConfig {
-            Text = "login", FontSize = 24, OnClicked = () => {
+            Text = "login", FontSize = 18, OnClicked = () => {
                 var login = new LoginContainer();
                 login.AddEventListener(LoginContainer.LoginEvent, OnLogin);
                 OverlayManager.Set(login);
@@ -88,7 +88,7 @@ public class AccountOverlay : Sprite {
 
         var nameConfig = new TextConfig {
             Text = $"logged in as {account.Name}",
-            FontSize = 24,
+            FontSize = 18,
             FontType = FontType.Normal,
             Color = 0xB3B3B3
         };
@@ -98,7 +98,7 @@ public class AccountOverlay : Sprite {
 
         var dashConfig = new TextConfig {
             Text = "-",
-            FontSize = 24,
+            FontSize = 18,
             X = nameText.Width + LinkSpacing,
             Color = 0xB3B3B3
         };
@@ -107,8 +107,8 @@ public class AccountOverlay : Sprite {
         _container.AddChild(dashText);
 
         var logoutConfig = new TextButtonConfig {
-            Text = "logout",
-            FontSize = 24,
+            Text = "log out",
+            FontSize = 18,
             FontType = FontType.Bold,
             OnClicked = OnLogout,
             X = dashText.X + dashText.Width + LinkSpacing

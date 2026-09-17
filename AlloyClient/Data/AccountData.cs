@@ -75,7 +75,7 @@ public sealed class AccountStats {
 
 public class ClassStats(XElement xml) {
 
-    public readonly int ObjectType = xml.GetValue("objectType", 0);
+    public readonly int ObjectType = xml.GetAttribute("objectType", xml.GetValue("objectType", 0));
 
     public readonly int BestFame = xml.GetValue("BestFame", 0);
 

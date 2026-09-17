@@ -73,8 +73,8 @@ public sealed class OptionsView : Overlay {
             FontSize = 36,
             OnClicked = OnContinue,
             X = PanelWidth / 2,
-            Y = 520,
-            Anchor = UiAnchor.MiddleTop
+            Y = TitleMenuRibbon.MenuCenterY,
+            Anchor = UiAnchor.Middle
         });
         AddChild(continueButton);
 
@@ -83,8 +83,8 @@ public sealed class OptionsView : Overlay {
             FontSize = 22,
             OnClicked = OnResetToDefaults,
             X = 20,
-            Y = 532,
-            Anchor = UiAnchor.LeftTop
+            Y = TitleMenuRibbon.MenuCenterY,
+            Anchor = UiAnchor.MiddleLeft
         });
         AddChild(resetButton);
 
@@ -93,8 +93,8 @@ public sealed class OptionsView : Overlay {
             FontSize = 22,
             OnClicked = OnHome,
             X = 620,
-            Y = 532,
-            Anchor = UiAnchor.LeftTop
+            Y = TitleMenuRibbon.MenuCenterY,
+            Anchor = UiAnchor.MiddleLeft
         });
         AddChild(homeButton);
 

@@ -1,299 +1,156 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Alloy.UiLib.BuiltIn;
 using Alloy.UiLib.Core;
 using Alloy.UiLib.Extra;
 using AlloyClient.Assets.Libraries;
 using AlloyClient.Data;
 using AlloyClient.Display;
-using AlloyClient.Game;
-using AlloyClient.Ui.Components.Buttons;
-using AlloyClient.Ui.Components.Graphics;
+using AlloyClient.Ui;
 using AlloyClient.Utils;
+using OpenTK.Mathematics;
 
 namespace AlloyClient.Screens.Components.CharacterList;
 
-public enum CharacterRectType {
-    Character,
-    GraveyardCharacter,
-    NewCharacter,
-}
-
 public sealed class CharacterRect : Container {
+    private readonly ColorRect _background;
+    private CharacterSelectionTooltip _tooltip;
+    private bool _pressed;
 
-    private const int CardWidth = 200;
-    private const int CardHeight = 200;
-    private const int NumberStatsMaxed = 8;
-    private const int NumberStars = 5;
-
-    private const int NumberCharacters = 15;
-
-    private readonly CharacterListScreen _characterListScreen;
-
-    private int _statsMaxed;
-    private int _baseFame;
-
-    public CharacterRect(CharacterListScreen characterListScreen) : base(new ContainerConfig
-        { Width = CardWidth, Height = CardHeight }) {
-        _characterListScreen = characterListScreen;
-
-        var background = new ColorRect(new ColorRectConfig {
-            Width = CardWidth,
-            Height = CardHeight,
-            Color = 0x2B2B2B,
-            Alpha = 0.7f,
-        });
-
-        AddChild(background);
-        AddChild(new CutCornerOutline(CardWidth, CardHeight));
-    }
-
-    public void Initialize(CharacterRectType type, Character character = null, int remainingSlots = 0) {
-        var charNameText = new SimpleText(new TextConfig {
-            Text = "New Character",
-            FontSize = 18,
-            FontType = FontType.Bold,
-            Color = 0xFFFFFF,
-            Anchor = UiAnchor.Middle,
-        });
-
-        charNameText.X = CardWidth / 2;
-        charNameText.Y = charNameText.Height / 2 + 10;
-        AddChild(charNameText);
-
-        var textButton = new TextButton(new TextButtonConfig {
-            Text = type switch {
-                CharacterRectType.Character => "Play",
-                CharacterRectType.GraveyardCharacter => "View",
-                CharacterRectType.NewCharacter => "Create",
-                _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
-            },
-            FontSize = 24,
-            Anchor = UiAnchor.Middle,
-            OnClicked = type switch {
-                CharacterRectType.Character => () => {
-                    if (character == null) {
-                        return;
-                    }
-
-                    GlobalData.SelectedCharacterId = character.Id;
-                    ScreenManager.FadeToScreen(new GameScreen(), Easing.SineInOut, 1000, 0x0);
-                },
-                CharacterRectType.GraveyardCharacter => () => {
-                    if (character == null) {
-                    }
-                },
-                CharacterRectType.NewCharacter => () => { _characterListScreen.ShowCharacterCreate(); },
-                _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
-            },
-        });
-
-        textButton.X = Width / 2;
-        textButton.Y = Height - textButton.Height / 2 - 12;
-        AddChild(textButton);
-
-        if (character != null) {
-            #region Character and Graveyard Character
-
-            var props = ObjectLibrary.TypeToObjectProps[character.ObjectType];
-            charNameText.SetText(props.ObjectId);
-
-            _statsMaxed = GetStatsMaxed(character);
-            var statsMaxedText = new SimpleText(new TextConfig {
-                Text = $"{_statsMaxed}/{NumberStatsMaxed}",
-                FontSize = 16,
-                FontType = FontType.Bold,
-                Color = 0xCFCFCF,
-                Anchor = UiAnchor.Middle,
-            });
-
-            statsMaxedText.X = Width / 2;
-            statsMaxedText.Y = charNameText.Height + statsMaxedText.Height / 2 + 13;
-            AddChild(statsMaxedText);
-
-            switch (_statsMaxed) {
-                case NumberStatsMaxed:
-                    statsMaxedText.SetColor(0xFCDF00);
-                    break;
-                case > 0:
-                    statsMaxedText.SetColor(0xFFFFFF);
-                    break;
-            }
-
-            var textureData = ObjectLibrary.TypeToTextureData[character.ObjectType];
-            var atlasData = textureData.AnimatedTextures.FaceDown[0];
-
-            var charPortrait = new ObjectRect(new ObjectRectConfig {
-                Texture = TextureHelper.Create(atlasData, TextureType.GameAtlas),
-                Width = 50,
-                Height = 50,
-                Anchor = UiAnchor.Middle,
-            });
-
-            charPortrait.X = Width / 2;
-            charPortrait.Y = statsMaxedText.Y + charPortrait.Height / 2 + 14;
-            AddChild(charPortrait);
-
-            _baseFame = character.CurrentFame;
-
-            var fameText = new SimpleText(new TextConfig {
-                Text = _baseFame.ToString(),
-                FontSize = 16,
-                FontType = FontType.Bold,
-                Color = 0xFFFFFF,
-                Anchor = UiAnchor.Middle,
-            });
-
-            fameText.X = Width / 2;
-            fameText.Y = charPortrait.Y + charPortrait.Height / 2 + 14;
-            AddChild(fameText);
-
-            const int middleStarIndex = NumberStars / 2;
-            const int starWidth = 16;
-            var startX = Width / 2 - middleStarIndex * starWidth;
-            var numStars = GetStars(character);
-            for (var i = 0; i < NumberStars; i++) {
-                var star = new ObjectRect(new ObjectRectConfig {
-                    Texture = TextureHelper.FromUiAtlas("CharacterList/StarGraphic"),
-                    Width = starWidth,
-                    Height = starWidth,
-                    Anchor = UiAnchor.Middle,
-                    X = startX + i * starWidth,
-                    Y = fameText.Y + starWidth / 2 + 12,
-                });
-
-                AddChild(star);
-
-                if (i >= numStars) {
-                    star.ColorTransformation = new ColorTransform(0.5f, 0.5f, 0.5f, 1);
-                }
-            }
-
-            #endregion
-        } else {
-            #region New Character
-
-            var index = Random.Shared.Next(0, NumberCharacters);
-            var frames = Main.Atlas.GetAnimationAtlasData("players", index);
-            var charPortrait = new ObjectRect(new ObjectRectConfig {
-                Texture = TextureHelper.Create(frames.FaceDown[0], TextureType.GameAtlas),
-                Width = 50,
-                Height = 50,
-                Anchor = UiAnchor.Middle,
-                OutlineEnabled = false,
-                GlowEnabled = false
-            });
-
-            charPortrait.X = Width / 2;
-            charPortrait.Y = charNameText.Height + charPortrait.Height / 2 + 25;
-            charPortrait.ColorTransformation = new ColorTransform(0, 0, 0, 0.5f);
-            AddChild(charPortrait);
-
-            var remainingSlotsText = new SimpleText(new TextConfig {
-                Text = $"{remainingSlots} Character Slots",
-                FontSize = 18,
-                FontType = FontType.Bold,
-                Color = 0xFFFFFF,
-                Anchor = UiAnchor.Middle,
-            });
-
-            remainingSlotsText.X = Width / 2;
-            remainingSlotsText.Y = charPortrait.Y + charPortrait.Height / 2 + 25;
-            AddChild(remainingSlotsText);
-
-            var remainingSlotsText2 = new SimpleText(new TextConfig {
-                Text = "Remaining",
-                FontSize = 18,
-                FontType = FontType.Bold,
-                Color = 0xFFFFFF,
-                Anchor = UiAnchor.Middle,
-            });
-
-            remainingSlotsText2.X = Width / 2;
-            remainingSlotsText2.Y = remainingSlotsText.Y + remainingSlotsText.Height / 2 + 12;
-            AddChild(remainingSlotsText2);
-
-            #endregion
-        }
-    }
-
-    public int ComputeSortValue() {
-        return _statsMaxed * 1000 + _baseFame;
-    }
-
-    private static int GetStatsMaxed(Character characterModel) {
-        var player = ObjectLibrary.TypeToObjectProps[characterModel.ObjectType];
-        var playerProps = player.PlayerProperties;
-
-        var numStatsMaxed = 0;
-        if (characterModel.MaxHitPoints >= playerProps.MaxHp) {
-            numStatsMaxed++;
-        }
-
-        if (characterModel.MaxMagicPoints >= playerProps.MaxMp) {
-            numStatsMaxed++;
-        }
-
-        if (characterModel.Attack >= playerProps.MaxAttack) {
-            numStatsMaxed++;
-        }
-
-        if (characterModel.Defense >= playerProps.MaxDefense) {
-            numStatsMaxed++;
-        }
-
-        if (characterModel.Speed >= playerProps.MaxSpeed) {
-            numStatsMaxed++;
-        }
-
-        if (characterModel.Dexterity >= playerProps.MaxDexterity) {
-            numStatsMaxed++;
-        }
-
-        if (characterModel.Vitality >= playerProps.MaxVitality) {
-            numStatsMaxed++;
-        }
-
-        if (characterModel.Wisdom >= playerProps.MaxWisdom) {
-            numStatsMaxed++;
-        }
-
-        return numStatsMaxed;
-    }
-
-    private static int GetStars(Character characterModel) {
-        return 0;
-        //TODO: stars
-        /*var fame = characterModel.CurrentFame;
-        var accountModel = Account.Model;
-        if (accountModel.Stats == null || accountModel.Stats.ClassStats == null)
+    public CharacterRect(Character character, Action play, Action delete)
+        : this(0x5C5C5C, 0x7F7F7F, play)
+    {
+        var props = ObjectLibrary.TypeToObjectProps.GetValueOrDefault(character.ObjectType);
+        var className = props?.DisplayName ?? "Unknown";
+        AddChild(SelectionGraphics.Text($"{className} {character.Level}", 18, 58, 6, 0xFFFFFF, true));
+        AddPortrait(character.Skin != 0 ? character.Skin : character.ObjectType);
+        var stats = GlobalData.Get<AccountData>()?.Stats.ClassStats.FirstOrDefault(s => s.ObjectType == character.ObjectType);
+        var goal = FameUtils.NextStarFame(stats?.BestFame ?? 0, character.CurrentFame);
+        if (goal > 0)
         {
-            Logger.Fatal("accountModel.Stats.ClassStats is null! At CharacterRect.cs");
-            return 0;
+            AddQuest($"Class Quest: {character.CurrentFame} of {goal} Fame");
         }
-        foreach (var classStatModel in accountModel.Stats.ClassStats)
+        var deleteButton = new Container(new ContainerConfig { X = 316, Y = 19, Width = 20, Height = 20 }) { MouseEnabled = true };
+        deleteButton.AddChild(new ObjectRect(new ObjectRectConfig
         {
-            var objTypeStr = classStatModel.ObjectType;
-            var objectType = Convert.ToUInt16(objTypeStr, Common.Utils.GetBase(objTypeStr));
-            if (objectType != characterModel.ObjectType)
-            {
-                continue;
-            }
-
-            if (fame < classStatModel.BestFame)
-            {
-                fame = classStatModel.BestFame;
-            }
-        }
-
-        return fame switch
+            Texture = TextureHelper.FromUiAtlas("CharacterList/DeleteXGraphic", padding: false),
+            Width = 20,
+            Height = 20,
+            OutlineEnabled = false,
+            GlowEnabled = false,
+            GameObjectShade = false
+        }));
+        deleteButton.AddEventListener(MouseEvent.LeftDown, (MouseEvent e) =>
         {
-            < 20 => 0,
-            < 150 => 1,
-            < 400 => 2,
-            < 800 => 3,
-            < 2000 => 4,
-            _ => 5,
-        };*/
+            e.StopImmediatePropagation();
+            _pressed = false;
+            HideTooltip();
+            delete();
+        });
+        deleteButton.AddEventListener(MouseEvent.LeftUp, (MouseEvent e) => e.StopImmediatePropagation());
+        AddChild(deleteButton);
+        AddEventListener(MouseEvent.MouseOver, () =>
+        {
+            if (_tooltip != null) return;
+            _tooltip = new CharacterSelectionTooltip(character, className, stats);
+            TooltipManager.AddTooltip(_tooltip);
+        });
+        AddEventListener(MouseEvent.MouseOut, HideTooltip);
+        AddEventListener(Event.RemovedFromStage, HideTooltip);
     }
 
+    public CharacterRect(Action create) : this(0x545454, 0x777777, create)
+    {
+        AddChild(SelectionGraphics.Text("New Character", 18, 58, 6, 0xFFFFFF, true));
+        var classes = ObjectLibrary.TypeToClassProps.Keys.ToArray();
+        if (classes.Length > 0) AddPortrait(classes[Random.Shared.Next(classes.Length)], true);
+        var stars = GlobalData.Get<AccountData>()?.Stats.ClassStats.Sum(s => FameUtils.FameToStar(s.BestFame)) ?? 0;
+        var remaining = FameUtils.MaxStars - stars;
+        if (remaining > 0) AddQuest($"{remaining} Class quests not yet completed");
+    }
+
+    public CharacterRect(int maxCharacters, Action buy) : this(0x1F1F1F, 0x424242, buy)
+    {
+        var border = SelectionShape.Circle(20, 0x463E41);
+        border.X = 6;
+        border.Y = 6;
+        AddChild(border);
+        var circle = SelectionShape.Circle(19, 0x3B3536);
+        circle.X = 7;
+        circle.Y = 7;
+        AddChild(circle);
+        AddChild(new ColorRect(new ColorRectConfig { X = 18, Y = 24, Width = 16, Height = 4, Color = 0x1F1F1F }));
+        AddChild(new ColorRect(new ColorRectConfig { X = 24, Y = 18, Width = 4, Height = 16, Color = 0x1F1F1F }));
+        AddChild(SelectionGraphics.Text($"Buy {CharacterSelectionLayout.Ordinal(maxCharacters + 1)} Character Slot", 18, 58, 6, 0xFFFFFF, true));
+        var price = SelectionGraphics.Text(CharacterSelectionLayout.SlotPrice.ToString(), 18, 313, 17, 0xFFFFFF);
+        price.X -= price.Width;
+        AddChild(price);
+        AddChild(new ObjectRect(new ObjectRectConfig
+        {
+            X = 315,
+            Y = 19,
+            Width = 22,
+            Height = 22,
+            Texture = TextureHelper.FromGameAtlas("lofiObj3", 0xE0),
+            GameObjectShade = false
+        }));
+    }
+
+    private CharacterRect(uint color, uint hover, Action action)
+        : base(new ContainerConfig { Width = CharacterSelectionLayout.RowWidth, Height = CharacterSelectionLayout.RowHeight })
+    {
+        MouseEnabled = true;
+        _background = new ColorRect(new ColorRectConfig { Width = CharacterSelectionLayout.RowWidth, Height = CharacterSelectionLayout.RowHeight, Color = color });
+        AddChild(_background);
+        AddEventListener(MouseEvent.MouseOver, () => _background.SetColor(hover));
+        AddEventListener(MouseEvent.MouseOut, () => { _background.SetColor(color); _pressed = false; });
+        AddEventListener(MouseEvent.LeftDown, () => _pressed = true);
+        AddEventListener(MouseEvent.LeftUp, () =>
+        {
+            if (!_pressed) return;
+            _pressed = false;
+            HideTooltip();
+            action();
+        });
+    }
+
+    private void AddPortrait(ushort type, bool dimmed = false)
+    {
+        if (!ObjectLibrary.TypeToTextureData.TryGetValue(type, out var texture)) return;
+        var portrait = new ObjectRect(new ObjectRectConfig
+        {
+            Texture = texture.AnimatedTextures is { } animation
+                ? TextureHelper.Create(animation.FaceRight[0], TextureType.GameAtlas)
+                : TextureHelper.FromGameAtlas(type),
+            Width = 50,
+            Height = 50
+        });
+        if (dimmed) portrait.ColorTransformation = new ColorTransform(0, 0, 0, 0.5f);
+        AddChild(portrait);
+    }
+
+    private void AddQuest(string text)
+    {
+        var star = new ObjectRect(new ObjectRectConfig
+        {
+            Texture = TextureHelper.FromUiAtlas("CharacterList/StarGraphic", padding: false),
+            X = 58,
+            Y = CharacterSelectionLayout.QuestIconY,
+            Width = 12,
+            Height = 12,
+            OutlineEnabled = false,
+            GlowEnabled = false
+        })
+        { ColorTransformation = new ColorTransform(179 / 255f, 179 / 255f, 179 / 255f, 1) };
+        AddChild(star);
+        AddChild(SelectionGraphics.Text(text, 14, 72, CharacterSelectionLayout.QuestTextY));
+    }
+
+    private void HideTooltip()
+    {
+        if (_tooltip == null) return;
+        TooltipManager.RemoveTooltip(_tooltip);
+        _tooltip = null;
+    }
 }

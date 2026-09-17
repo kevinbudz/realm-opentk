@@ -15,6 +15,7 @@ public struct ObjectRectConfig {
     public uint OutlineColor = 0x0;
     public bool OutlineEnabled = true;
     public bool GlowEnabled = true;
+    public bool GameObjectShade = true;
 
     public UiAnchor Anchor = UiAnchor.LeftTop;
 
@@ -31,6 +32,7 @@ public class ObjectRect : Sprite {
     private int _height;
     private bool _outline;
     private bool _glow;
+    private readonly bool _gameObjectShade;
 
     public ObjectRect(ObjectRectConfig config) {
         X = config.X;
@@ -46,6 +48,7 @@ public class ObjectRect : Sprite {
         TextureId = config.Texture.TextureType;
         _outline = config.OutlineEnabled;
         _glow = config.GlowEnabled;
+        _gameObjectShade = config.GameObjectShade;
 
         ResizeBackBuffer();
         FillData();
@@ -64,7 +67,12 @@ public class ObjectRect : Sprite {
 
         SetGraphicsBuffer();
 
-        Extra1 = new Vector4(_texture.V + _texture.H * 0.4f, _texture.V, _texture.H, _outline ? 1f : -1f);
+        if (_gameObjectShade) {
+            Extra1 = new Vector4(_texture.V + _texture.H * 0.4f, _texture.V, _texture.H, _outline ? 1f : -1f);
+        } else {
+            Extra1 = new Vector4(1f, -1f, -1f, _outline ? 1f : -1f);
+        }
+
         Extra2 = new Vector4(_width, _height, _glow ? 1f : -1f, 0);
     }
 

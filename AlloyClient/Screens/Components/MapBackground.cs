@@ -25,7 +25,9 @@ namespace AlloyClient.Screens.Components;
 /// An embedded background map pans slowly past a fixed-angle camera at one
 /// tile per second, wrapping seamlessly. The map is written double-wide so
 /// the scroll can wrap, and the camera viewport tracks the real window size
-/// floored at the 800x600 design space so the map fills any window.
+/// floored at the 800x600 design space. The zoom scales with window height
+/// against the 600px baseline so taller windows magnify the map instead of
+/// revealing more of it (and its edges).
 ///
 /// The decoded map is shared across all menu screens (matching the Flash
 /// statics), so navigating between menus keeps the scroll position. It only
@@ -38,10 +40,13 @@ public sealed class MapBackground {
     private const float Angle = 7f * MathF.PI / 4f;
 
     // Flash uses the non-perspective camera path with a fixed scale of 50,
-    // i.e. one tile covers 50 screen pixels. Alloy's orthographic range
-    // spans twice the viewport width, halving the base zoom of 100 to the
-    // same 50 pixels per tile, so a zoom of 1 reproduces the Flash framing.
-    private const float Zoom = 1f;
+    // i.e. one tile covers 50 screen pixels at the 800x600 design size.
+    // Alloy's orthographic range spans twice the viewport width, halving
+    // the base zoom of 100 to the same 50 pixels per tile, so a zoom of 1
+    // reproduces the Flash framing. Taller windows zoom in proportionally
+    // (height / 600) so they show the same vertical slice of the map
+    // instead of revealing its edges.
+    internal float Zoom => _viewHeight / (float)DesignHeight;
 
     private const int DesignWidth = 800;
     private const int DesignHeight = 600;

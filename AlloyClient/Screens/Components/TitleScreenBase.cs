@@ -28,8 +28,8 @@ public abstract class TitleScreenBase : Screen {
     private const int MusicY = 0;
     private const int RankX = 36;
     private const int RankY = 4;
-    private const int AccountInfoMargin = 10;
-    private const int AccountInfoY = 2;
+    private const int AccountInfoMargin = 8;
+    private const int AccountInfoY = 3;
 
     private readonly ScreenDarkenOverlay _darken = new();
     private readonly ScreenGraphic _fallbackBackground;
@@ -137,21 +137,10 @@ public abstract class TitleScreenBase : Screen {
             guildName = account.GuildName ?? string.Empty;
         }
 
-        var starCount = new SimpleText(new TextConfig {
-            Text = stars.ToString(),
-            FontSize = 24,
-            FontType = FontType.Bold,
-            Color = 0xB3B3B3
-        });
-
-        starCount.Y = (32 - starCount.Height) / 2;
-        _accountIdentity.AddChild(starCount);
-
-        var star = new FameStar(32, stars) {
-            X = starCount.Width + 7
-        };
-
-        _accountIdentity.AddChild(star);
+        // Flash AccountScreen.setRank uses RankText(stars, largeText: true,
+        // includePrefix: false): 18px bold + big star inside a dark pill.
+        var rank = new RankText(stars, largeText: true, includePrefix: false);
+        _accountIdentity.AddChild(rank);
 
         if (string.IsNullOrWhiteSpace(guildName)) {
             return;
@@ -161,7 +150,7 @@ public abstract class TitleScreenBase : Screen {
             Text = guildName,
             FontSize = 24,
             Color = 0xB3B3B3,
-            X = star.X + star.Width + 10
+            X = rank.Width + 10
         });
 
         guild.Y = (32 - guild.Height) / 2;

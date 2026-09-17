@@ -16,6 +16,8 @@ internal static class Program
 
     public static int Main()
     {
+        Run("Character selection and news data", CharacterSelectionTests.Run);
+        Run("Menu buttons share the ribbon center", MenuBarAlignmentTests.Run);
         Run("HP bars keep world size across zoom", HpBarScaleTests.Run);
         Run("MapBackground embedded map decodes", MapBackgroundDecodeTests.Run);
         Run("MapBackground camera framing", MapBackgroundCameraTests.Run);

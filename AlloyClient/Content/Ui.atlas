@@ -8,6 +8,7 @@
     <Image name="textBox">TextBox.png</Image>
     <Image name="BlackCircle">BlackCircle.png</Image>
     <Image name="CharacterList/StarGraphic">CharacterList/StarGraphic.png</Image>
+    <Image name="CharacterList/DeleteXGraphic">CharacterList/DeleteXGraphic.png</Image>
     <Image name="FameBackground/FameBackground">FameBackground/FameBackground.png</Image>
     <Image name="KeysBackground">KeysView/KeysView_BackgroundPng.png</Image>
     <Image name="KeysGreen">KeysView/KeysView_greenKeyPng.png</Image>

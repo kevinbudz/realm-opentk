@@ -99,7 +99,7 @@ public static class AppRequests {
         if (login is null) {
             return new AppResponse { Success = false, Message = "Not logged in" };
         }
-        var response = await AppEngineClient.SendRequest("/account/purchaseCharSlot", BuildAccountRequestData(login.Username, login.Password), 3);
+        var response = await AppEngineClient.SendRequest("/account/purchaseCharSlot", BuildAccountRequestData(login.Username, login.Password), 0);
         
         if (response == null) {
             return new AppResponse { Success = false, Message = "Failed to contact server." };
@@ -110,9 +110,33 @@ public static class AppRequests {
         return result == string.Empty ? new AppResponse { Success = true } : new AppResponse { Success = false, Message = result };
     }
     
-    // Delete
-    
-    //Fame
+    public static async Task<AppResponse> DeleteCharacter(int characterId) {
+        var login = GlobalData.Get<LoginData>();
+        if (login == null) return new AppResponse { Message = "Not logged in" };
+        var data = BuildAccountRequestData(login.Username, login.Password);
+        data["charId"] = characterId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var response = await AppEngineClient.SendRequest("/char/delete", data, 1);
+        if (response == null) return new AppResponse { Message = "Failed to contact server." };
+        try {
+            var xml = XElement.Parse(response);
+            return new AppResponse { Success = xml.Name.LocalName == "Success", Message = xml.Value };
+        } catch (XmlException) {
+            return new AppResponse { Message = "Invalid server response." };
+        }
+    }
+
+    public static async Task<XElement> GetCharacterFame(int accountId, int characterId) {
+        var response = await AppEngineClient.SendRequest("/char/fame", new Dictionary<string, string> {
+            ["accountId"] = accountId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["charId"] = characterId.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        }, 3);
+        if (response == null) return new XElement("Error", "Failed to contact server.");
+        try {
+            return XElement.Parse(response);
+        } catch (XmlException) {
+            return new XElement("Error", "Invalid server response.");
+        }
+    }
 
     public static async Task<AppResponse> GetCharList() {
         var login = GlobalData.Get<LoginData>() ?? LoginData.Default;
@@ -134,7 +158,7 @@ public static class AppRequests {
             // must not leave a partial account state behind for a later route.
             var account = new AccountData(xml.Element("Account"));
             var characterList = new CharacterListData(xml);
-            var news = new NewsData(xml.Elements("NewsItem"));
+            var news = NewsData.FromCharacterList(xml);
             var servers = new ServerListData(xml.Element("Servers") ?? DefaultServersXml());
 
             GlobalData.Add(account);
