@@ -44,6 +44,24 @@ public class ItemDesc {
     public readonly ActivateEffectDesc[] ActivateEffects;
     public readonly ProjectileDesc Projectiles;
 
+    // Tooltip parity fields (mirror the Flash hasOwnProperty checks).
+    public readonly bool HasTier;
+    public readonly bool IsSet;
+    public readonly string SetName;
+    public readonly bool Treasure;
+    public readonly bool PetFood;
+    public readonly bool NoTierTag;
+    public readonly bool IsPermaPet;
+    public readonly int ScaleValue;
+    public readonly bool HasSlotType;
+    public readonly bool HasNumProjectiles;
+    public readonly bool HasMpCost;
+    public readonly bool HasCooldown;
+    public readonly bool HasFameBonus;
+    public readonly bool HasDoses;
+    public readonly ExtraTooltipInfo[] ExtraTooltipData;
+    public readonly EquipRequirementDesc[] EquipRequirements;
+
     public ItemDesc(ushort type, XElement xml) {
         ObjectType = type;
         ObjectId = xml.GetAttribute<string>("id");
@@ -82,12 +100,45 @@ public class ItemDesc {
         StatBoosts = xml.Elements("ActivateOnEquip").Select(i => new StatBoostDesc(i)).ToArray();
         ActivateEffects = xml.Elements("Activate").Select(i => new ActivateEffectDesc(i)).ToArray();
         Projectiles = xml.HasElement("Projectile") ? new ProjectileDesc(xml.Element("Projectile")) : null;
+
+        HasTier = xml.HasElement("Tier");
+        IsSet = xml.HasAttribute("setType");
+        SetName = xml.GetAttribute<string>("setName");
+        Treasure = xml.HasElement("Treasure");
+        PetFood = xml.HasElement("PetFood");
+        NoTierTag = xml.HasElement("NoTierTag");
+        IsPermaPet = xml.Elements("Activate").Any(e => e.Value == "PermaPet");
+        ScaleValue = xml.GetValue<int>("ScaleValue", 5);
+        HasSlotType = xml.HasElement("SlotType");
+        HasNumProjectiles = xml.HasElement("NumProjectiles");
+        HasMpCost = xml.HasElement("MpCost");
+        HasCooldown = xml.HasElement("Cooldown");
+        HasFameBonus = xml.HasElement("FameBonus");
+        HasDoses = xml.HasElement("Doses");
+        ExtraTooltipData = xml.Element("ExtraTooltipData")?.Elements("EffectInfo")
+            .Select(e => new ExtraTooltipInfo(e.GetAttribute<string>("name"), e.GetAttribute<string>("description")))
+            .ToArray() ?? [];
+        EquipRequirements = xml.Elements("EquipRequirement")
+            .Select(e => new EquipRequirementDesc(e.Value, e.GetAttribute<int>("stat"), e.GetAttribute<int>("value")))
+            .ToArray();
     }
 }
 
+public class ExtraTooltipInfo(string name, string description) {
+    public string Name = name;
+    public string Description = description;
+}
+
+public class EquipRequirementDesc(string kind, int stat, int value) {
+    public string Kind = kind;
+    public int Stat = stat;
+    public int Value = value;
+}
+
 public class StatBoostDesc(XElement xml) {
-    public int Stat = xml.GetValue<int>("Stat");
-    public int Amount = xml.GetValue<int>("Amount");
+    // XML carries these as attributes (<ActivateOnEquip stat="21" amount="2">).
+    public int Stat = xml.GetAttribute<int>("stat");
+    public int Amount = xml.GetAttribute<int>("amount");
 }
 
 public class ProjectileDesc {

@@ -93,7 +93,7 @@ public sealed class PotionInventory : Sprite {
             _countText = new SimpleText(new TextConfig {
                 Text = "0",
                 FontSize = 13,
-                FontType = FontType.Bold,
+                FontType = FontType.Normal,
                 X = ButtonWidth / 2 + 6,
                 Y = 6,
                 Color = 0xAAAAAA,

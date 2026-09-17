@@ -153,7 +153,7 @@ public sealed class Projectile : IResettable { // TODO: make struct
         } else if (!_noRotation) {
             var direction = newPos - _position;
             var angle = MathF.Atan2(direction.Y, direction.X);
-            _rotation = angle + Settings.CameraAngle + _angleCorrection;
+            _rotation = angle - Settings.CameraAngle + _angleCorrection;
         }
 
         

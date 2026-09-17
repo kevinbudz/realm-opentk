@@ -1,4 +1,5 @@
 ﻿using System;
+using AlloyClient.Assets.Libraries;
 using AlloyClient.Assets.XmlStructs;
 using AlloyClient.Display;
 using AlloyClient.Game.Objects;
@@ -138,35 +139,56 @@ public sealed class ItemTile : Sprite {
     }
 
     private void UpdateTierTag() {
-        if (ItemDesc == null || ItemDesc.Consumable || ItemDesc.SlotType == 10) {
+        var tag = ItemDesc == null ? null : EquipmentTooltipBuilder.GetTierTag(ItemDesc);
+        if (tag == null) {
             _tierText.Visible = false;
             return;
         }
 
-        var color = 0xFFFFFFu;
-        var tag = $"T{ItemDesc.Tier}";
-
-        if (ItemDesc.Tier == -1) {
-            color = 0x8A2BE2;
-            tag = "UT";
-        }
-
-        //todo: item set
-        /*if (Item.Set) {
-            color = 0xFF9900;
-            tag = "ST";
-        }*/
-
-
-        _tierText.SetText(tag);
-        _tierText.SetColor(color);
+        _tierText.SetText(tag.Value.Text);
+        _tierText.SetColor(tag.Value.Color);
         _tierText.Visible = true;
     }
 
     private void OnMouseOver() {
         if (ItemDesc == null || _dragging) return;
-        _tooltip = new EquipmentToolTip(ItemDesc);
+        _tooltip = new EquipmentToolTip(ItemDesc, GetSlotItemData(), BuildPlayerContext(),
+            GetOwnerType(), ObjectLibrary.GetUsableByNames(ItemDesc));
         TooltipManager.AddTooltip(_tooltip);
+    }
+
+    private int GetSlotItemData() {
+        if (Owner != null && SlotId < Owner.ItemData.Length)
+            return Owner.ItemData[SlotId];
+        return -1;
+    }
+
+    private string GetOwnerType() {
+        if (Owner == Map.LocalPlayer)
+            return TooltipOwnerTypes.CurrentPlayer;
+        if (Owner is Player)
+            return TooltipOwnerTypes.OtherPlayer;
+        return TooltipOwnerTypes.Npc;
+    }
+
+    private static PlayerTooltipContext BuildPlayerContext() {
+        var player = Map.LocalPlayer;
+        if (player?.Properties == null)
+            return null;
+        var end = player.HasBackPack ? 20 : 12;
+        var full = true;
+        for (var i = 4; i < end && i < player.Equipment.Length; i++) {
+            if (player.Equipment[i] == null) {
+                full = false;
+                break;
+            }
+        }
+        return new PlayerTooltipContext(
+            player.Properties.SlotTypes,
+            ObjectLibrary.GetDisplayName(player.Type),
+            player.MaxHp, player.MaxMp, player.Attack, player.Defense,
+            player.Speed, player.Vitality, player.Wisdom, player.Dexterity,
+            player.Level, full);
     }
 
     private void OnMouseOut() {
@@ -260,11 +282,15 @@ public sealed class ItemTile : Sprite {
 
         TooltipManager.RemoveTooltip(_tooltip);
 
+        // StartDrag reads Stage.Mouse, so it must run while the icon is
+        // still attached: RemoveChild clears its Stage, which used to throw
+        // here the moment any drag began.
+        _sprite.Scale = Stage.ScreenScale;
+        _sprite.StartDrag();
+
         RemoveChild(_sprite);
         RemoveChild(_tierText);
 
-        _sprite.Scale = Stage.ScreenScale;
-        _sprite.StartDrag();
         _sprite.AddEventListener(MouseEvent.LeftUp, OnEndDrag);
         GameScreen.GameSprite.AddChild(_sprite);
     }

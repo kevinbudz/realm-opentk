@@ -1,5 +1,6 @@
 using Alloy.Common;
 using AlloyClient.Assets.XmlStructs;
+using AlloyClient.Ui.Components.Tooltips;
 using Alloy.UiLib.BuiltIn;
 using Alloy.UiLib.Core;
 
@@ -10,24 +11,17 @@ public class TierText : Sprite
     private SimpleText Tag;
     public TierText(ItemDesc desc)
     {
-        var c = Color.White;
-
-        string text;
-        if (desc.Tier == -1)
-        {
-            c = Color.Purple;
-            text = "UT";
-        } else text = "T" + desc.Tier;
-        
+        // Tier rules live in the tooltip builder so tiles and tooltips agree.
+        var tag = EquipmentTooltipBuilder.GetTierTag(desc) ?? ("", 0xFFFFFFu);
         Tag = new SimpleText(new TextConfig()
         {
             FontSize = 16,
             FontType = FontType.Bold,
-            Text = text,
+            Text = tag.Item1,
             OutlineColor = 0,
             OutlineThickness = 2
         });
-        Tag.Color = c;
+        Tag.SetColor(tag.Item2);
         AddChild(Tag);
     }
 }

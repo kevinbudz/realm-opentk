@@ -16,8 +16,11 @@ internal static class Program
 
     public static int Main()
     {
+        Run("Projectile sprites counter-rotate with the camera", ProjectileRotationTests.Run);
         Run("Character selection and news data", CharacterSelectionTests.Run);
+        Run("Equipment tooltip parity", EquipmentTooltipTests.Run);
         Run("Game-server packet wire format", PacketWireTests.Run);
+        Run("Detached drag start is safe", SpriteDragTests.Run);
         Run("Menu buttons share the ribbon center", MenuBarAlignmentTests.Run);
         Run("HP bars keep world size across zoom", HpBarScaleTests.Run);
         Run("MapBackground embedded map decodes", MapBackgroundDecodeTests.Run);

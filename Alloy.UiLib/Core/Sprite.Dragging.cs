@@ -18,6 +18,12 @@ public partial class Sprite {
     public void StartDrag() => StartDrag<Sprite>();
 
     public void StartDrag<T>() where T : Sprite {
+        // A drag needs the stage for mouse coordinates. Detached sprites
+        // have none (RemoveChild clears it), so ignore the request instead
+        // of throwing on Stage.Mouse, mirroring GetRelativeMousePosition.
+        if (Stage == null)
+            return;
+
         if (_dragSprite != null)
             _dragSprite._isDragging = false;
 

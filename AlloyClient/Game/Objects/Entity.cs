@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Alloy.Common;
 using AlloyClient.Assets;
 using AlloyClient.Assets.Libraries;
@@ -67,6 +68,10 @@ public class Entity {
     public int Level;
 
     public ItemDesc[] Equipment = new ItemDesc[20];
+
+    // Per-slot ItemData bitmask (ITEMDATA_n stats), -1 when unknown.
+    // Mirrors the Flash itemData ints carried alongside each equipment slot.
+    public int[] ItemData = Enumerable.Repeat(-1, 20).ToArray();
 
     public ConditionEffectBucket EffectBuckets;
 
@@ -369,6 +374,30 @@ public class Entity {
                     break;
                 case StatsType.HasBackpack:
                     //todo
+                    break;
+                case StatsType.InventoryData0:
+                case StatsType.InventoryData1:
+                case StatsType.InventoryData2:
+                case StatsType.InventoryData3:
+                case StatsType.InventoryData4:
+                case StatsType.InventoryData5:
+                case StatsType.InventoryData6:
+                case StatsType.InventoryData7:
+                case StatsType.InventoryData8:
+                case StatsType.InventoryData9:
+                case StatsType.InventoryData10:
+                case StatsType.InventoryData11:
+                case StatsType.InventoryData12:
+                case StatsType.InventoryData13:
+                case StatsType.InventoryData14:
+                case StatsType.InventoryData15:
+                case StatsType.InventoryData16:
+                case StatsType.InventoryData17:
+                case StatsType.InventoryData18:
+                case StatsType.InventoryData19:
+                    var dataIndex = (int)stat.Type - (int)StatsType.InventoryData0;
+                    if (dataIndex >= 0 && dataIndex < ItemData.Length)
+                        ItemData[dataIndex] = stat.Value;
                     break;
                 case StatsType.PortalUsable:
                     PortalUsable = stat.Value != 0;
