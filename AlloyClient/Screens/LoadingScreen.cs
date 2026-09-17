@@ -10,6 +10,7 @@ using AlloyClient.Display;
 using AlloyClient.Screens.Components;
 using AlloyClient.Ui.Components.Dialogs;
 using AlloyClient.Ui.Components.Graphics;
+using AlloyClient.Ui.Flash;
 
 namespace AlloyClient.Screens;
 
@@ -29,18 +30,35 @@ public class LoadingScreen : TitleScreenBase {
             GlobalData.TryRemove<AppRequestFailedFlag>(out _);
         }
 
+        // Flash LoadingScreen.as: bold 30-point white text with a
+        // DropShadowFilter(0, 0, 0, 1, 4, 4), top edge at y = 526 and
+        // horizontally centered via LayoutHelper.centerX.
         _text = new SimpleText(new TextConfig {
             Text = "Loading...",
-            FontSize = 40,
+            FontSize = 30,
             FontType = FontType.Bold,
-            OutlineThickness = 4,
             Color = 0xFFFFFF,
+            DropShadow = FlashTextFilters.Default,
             Anchor = UiAnchor.Middle
         });
 
+        CenterText();
         MenuBar.AddChild(_text);
 
         AddEventListener(LoadAsync(isRetry), OnLoadComplete);
+    }
+
+    // Flash LoadingScreen.setText: replaces the message and re-centers it.
+    // The Middle anchor keeps the text horizontally centered; the Y offset
+    // keeps its top edge on the Flash y = 526 line in design units.
+    public void SetText(string value) {
+        _text.SetText(value);
+        CenterText();
+    }
+
+    private void CenterText() {
+        const int flashTextY = 526;
+        _text.Y = flashTextY + _text.Height / 2 - TitleMenuRibbon.MenuCenterY;
     }
 
     private static async Task<AppResponse> LoadAsync(bool isRetry) {

@@ -11,7 +11,6 @@ using AlloyClient.Game;
 using AlloyClient.Screens.Components.CharacterSelection;
 using AlloyClient.Ui;
 using AlloyClient.Ui.Components.Buttons;
-using AlloyClient.Ui.Components.Graphics;
 using AlloyClient.Ui.Components.Scrollbars;
 using AlloyClient.Utils;
 
@@ -20,13 +19,34 @@ namespace AlloyClient.Screens.Components.Containers;
 public sealed class ClassContainer : Container {
     private const int ScreenWidth = Settings.DefaultScreenWidth;
     private const int ScreenHeight = Settings.DefaultScreenHeight;
-    private const int TopSeparatorY = 100;
 
+    // Flash CharacterSkinView / NewCharacterScreen geometry in 800x600 design units.
+    private const int DividerY = 105;
+    private const int DividerX = 346;
+    private const int DividerBottomY = 526;
+    private const int DetailX = 5;
+    private const int DetailY = 110;
+    private const int DetailWidth = 344;
+    private const int DetailTextWidth = 188;
+    private const int DetailStatsRightX = 205;
+    private const int DetailStatsValueX = 223;
+    private const int SkinListX = 351;
+    private const int SkinListY = 110;
+    private const int SkinListWidth800 = 442;
+    private const int SkinListHeight800 = 400;
+    private const uint DividerColor = 0x545454;
+
+    // Flash NewCharacterScreen class grid: 5 columns on a 140px pitch.
     private const int ClassColumns = 5;
-    private const int ClassGapX = 20;
-    private const int ClassGapY = 14;
+    private const int ClassPitch = 140;
+    private const int ClassGridX = 50;
+    private const int ClassGridY = 88;
+    private const int ClassBackY = 524;
 
-    private const int SkinListHeight = TitleMenuRibbon.TopY - TopSeparatorY;
+    // Flash CharacterSkinView buttons.
+    private const int PlayButtonY = 520;
+    private const int DetailBackX = 30;
+    private const int DetailBackY = 534;
 
     private readonly Container _classScreen;
     private readonly Container _detailScreen;
@@ -38,8 +58,7 @@ public sealed class ClassContainer : Container {
     private int _screenWidth = ScreenWidth;
     private ObjectRect _detailPortrait;
 
-    private int DetailDividerX => (int)Math.Round(_screenWidth * (520d / ScreenWidth)) + 10;
-    private int SkinListWidth => _screenWidth - DetailDividerX;
+    private int SkinListWidth => Math.Max(SkinListWidth800, _screenWidth - (SkinListX + 7));
 
     public ClassContainer(Action onBack)
         : base(new ContainerConfig { Width = ScreenWidth, Height = ScreenHeight }) {
@@ -76,33 +95,29 @@ public sealed class ClassContainer : Container {
     }
 
     private void BuildClassScreen() {
+        // Flash NewCharacterScreen: x = 50 + 140 * col + 70 - w / 2, y = 88 + 140 * row.
         var classes = ObjectLibrary.TypeToClassProps.Keys.ToArray();
-        var gridWidth = ClassColumns * ClassChoiceCard.CardWidth + (ClassColumns - 1) * ClassGapX;
-        var rows = (int)Math.Ceiling(classes.Length / (double)ClassColumns);
-        var gridHeight = rows * ClassChoiceCard.CardHeight + Math.Max(0, rows - 1) * ClassGapY;
-        var startX = (_screenWidth - gridWidth) / 2;
-        var startY = TopSeparatorY + (TitleMenuRibbon.TopY - TopSeparatorY - gridHeight) / 2;
-
         for (var i = 0; i < classes.Length; i++) {
             var type = classes[i];
             var stats = GetClassStats(type);
             var card = new ClassChoiceCard(type, stats?.BestFame ?? 0, ShowClassDetails) {
-                X = startX + i % ClassColumns * (ClassChoiceCard.CardWidth + ClassGapX),
-                Y = startY + i / ClassColumns * (ClassChoiceCard.CardHeight + ClassGapY)
+                X = ClassGridX + ClassPitch * (i % ClassColumns) + ClassPitch / 2 - ClassChoiceCard.CardWidth / 2,
+                Y = ClassGridY + ClassPitch * (i / ClassColumns)
             };
 
             _classScreen.AddChild(card);
         }
 
+        // Flash: "back" 36pt, centered, top edge at y = 524.
         _classScreen.AddChild(new MenuBarButton(new TextButtonConfig {
             Text = "back",
-            FontSize = 32,
+            FontSize = 36,
             FontType = FontType.Bold,
             OutlineThickness = 4,
             OnClicked = _onBack,
             X = _screenWidth / 2,
-            Y = TitleMenuRibbon.MenuCenterY,
-            Anchor = UiAnchor.Middle
+            Y = ClassBackY,
+            Anchor = UiAnchor.MiddleTop
         }));
     }
 
@@ -119,13 +134,14 @@ public sealed class ClassContainer : Container {
         _detailScreen.RemoveChildren();
         _skinRows.Clear();
 
+        // Flash: 2px 0x545454 vertical line at x = 346 from y = 105 to y = 526.
         _detailScreen.AddChild(new ColorRect(new ColorRectConfig {
-            X = DetailDividerX,
-            Y = TopSeparatorY,
+            X = DividerX,
+            Y = DividerY,
             Width = 2,
-            Height = SkinListHeight,
-            Color = 0x777777,
-            Alpha = 0.75f
+            Height = DividerBottomY - DividerY,
+            Color = DividerColor,
+            Alpha = 1f
         }));
 
         BuildClassDetails();
@@ -134,14 +150,15 @@ public sealed class ClassContainer : Container {
     }
 
     private void BuildClassDetails() {
+        // Flash ClassDetailView (WIDTH 344 at x = 5, y = 110): labels right-justified
+        // at x = 205, values/stars at x = 223, all text with DropShadow(0,0,0,1,8,8).
         var props = ObjectLibrary.TypeToObjectProps[_selectedClassType];
         var stats = GetClassStats(_selectedClassType);
         var bestFame = stats?.BestFame ?? 0;
         var stars = FameUtils.FameToStar(bestFame);
         var textureData = ObjectLibrary.TypeToTextureData[_selectedClassType];
-        var contentWidth = Math.Min(DetailDividerX - 40, 480);
-        var centerX = contentWidth / 2;
-        var info = new Container(new ContainerConfig { Width = contentWidth });
+        const int centerX = DetailWidth / 2;
+        var info = new Container(new ContainerConfig { Width = DetailWidth });
 
         var faceRight = textureData.AnimatedTextures.FaceRight;
         var portraitTexture = faceRight is { Length: > 0 } ? faceRight[0] : textureData.Texture;
@@ -158,91 +175,104 @@ public sealed class ClassContainer : Container {
 
         info.AddChild(_detailPortrait);
 
-        info.AddChild(new SimpleText(new TextConfig {
+        var name = new SimpleText(new TextConfig {
             Text = props.DisplayName,
-            FontSize = 28,
+            FontSize = 20,
             FontType = FontType.Bold,
             Color = 0xFFFFFF,
+            DropShadow = new DropShadowFilter(0, 0, 0, 1, 8, 8),
             X = centerX,
-            Y = 122,
-            Anchor = UiAnchor.Middle
-        }));
+            Y = 110,
+            Anchor = UiAnchor.MiddleTop
+        });
+
+        info.AddChild(name);
 
         var description = new SimpleText(new TextConfig {
             Text = props.Description,
-            FontSize = 17,
-            Color = 0xE0E0E0,
+            FontSize = 14,
+            Color = 0xFFFFFF,
+            DropShadow = new DropShadowFilter(0, 0, 0, 1, 8, 8),
             X = centerX,
-            Y = 150,
-            MaxWidth = Math.Min(contentWidth - 30, 400),
+            Y = 110 + name.Height + 5,
+            MaxWidth = DetailTextWidth,
             Anchor = UiAnchor.MiddleTop
         });
 
         info.AddChild(description);
 
-        var statsStartY = description.Y + description.Height + 24;
-        var labelEndX = centerX + 55;
-        var starsX = centerX + 85;
-        var numericValueX = starsX - 8;
-        AddDetailLabel(info, "Class Quests Completed", labelEndX, statsStartY);
-        AddDetailStars(info, stars, starsX, statsStartY);
-        AddDetailLabel(info, "Highest Level Achieved", labelEndX, statsStartY + 32);
-        AddDetailValue(info, (stats?.BestLevel ?? 0).ToString(), numericValueX, statsStartY + 32);
-        AddDetailLabel(info, "Most Fame Achieved", labelEndX, statsStartY + 64);
-        var fameValue = AddDetailValue(info, bestFame.ToString(), numericValueX, statsStartY + 64);
+        var questY = description.Y + description.Height + 20;
+        var questLabel = AddDetailLabel(info, "Class Quests Completed", questY);
+        AddDetailStars(info, stars, DetailStatsValueX, questY);
+        var levelY = questY + questLabel.Height + 5;
+        var levelLabel = AddDetailLabel(info, "Highest Level Achieved", levelY);
+        AddDetailValue(info, (stats?.BestLevel ?? 0).ToString(), levelY);
+        var fameY = levelY + levelLabel.Height + 5;
+        var fameLabel = AddDetailLabel(info, "Most Fame Achieved", fameY);
+        var fameValue = AddDetailValue(info, bestFame.ToString(), fameY, 0xEACC6C);
         info.AddChild(new ObjectRect(new ObjectRectConfig {
             Texture = TextureHelper.FromGameAtlas("lofiObj3", 0xE0),
-            X = fameValue.X + fameValue.Width + 7,
-            Y = fameValue.Y,
+            X = fameValue.X + fameValue.Width - 3,
+            Y = fameY - 7,
             Width = 18,
             Height = 18,
-            Anchor = UiAnchor.MiddleLeft,
+            Anchor = UiAnchor.LeftTop,
             OutlineEnabled = false,
             GlowEnabled = false
         }));
 
-        var nextGoalLabelY = statsStartY + 120;
-        info.AddChild(new SimpleText(new TextConfig {
+        // Flash hides both next-goal texts when there is no next goal (-1).
+        var nextFame = FameUtils.NextStarFame(bestFame, 0);
+        var hasGoal = nextFame >= 0;
+        var nextGoalLabelY = fameY + fameLabel.Height + 17;
+        var nextGoalLabel = new SimpleText(new TextConfig {
             Text = "Next Goal:",
-            FontSize = 18,
+            FontSize = 14,
             FontType = FontType.Bold,
             Color = 0xFFFFFF,
+            DropShadow = new DropShadowFilter(0, 0, 0, 1, 8, 8),
             X = centerX,
             Y = nextGoalLabelY,
-            Anchor = UiAnchor.Middle
-        }));
-
-        var nextFame = FameUtils.NextStarFame(bestFame, 0);
-        var nextGoal = nextFame < 0 ? "All class stars earned" : $"Earn {nextFame} Fame with a {props.DisplayName}";
-        var nextGoalText = new SimpleText(new TextConfig {
-            Text = nextGoal,
-            FontSize = 17,
-            Color = 0xE0E0E0,
-            X = centerX,
-            Y = nextGoalLabelY + 32,
-            MaxWidth = Math.Min(contentWidth - 30, 420),
             Anchor = UiAnchor.MiddleTop
         });
 
+        nextGoalLabel.Visible = hasGoal;
+        info.AddChild(nextGoalLabel);
+
+        var nextGoalText = new SimpleText(new TextConfig {
+            Text = $"Earn {nextFame} Fame with a {props.DisplayName}",
+            FontSize = 14,
+            Color = 0xFFFFFF,
+            DropShadow = new DropShadowFilter(0, 0, 0, 1, 8, 8),
+            X = centerX,
+            Y = nextGoalLabelY + nextGoalLabel.Height,
+            Anchor = UiAnchor.MiddleTop
+        });
+
+        nextGoalText.Visible = hasGoal;
         info.AddChild(nextGoalText);
 
-        var contentHeight = nextGoalText.Y + nextGoalText.Height;
-        info.Resize(contentWidth, contentHeight);
-        info.X = DetailDividerX / 2;
-        info.Y = TopSeparatorY + SkinListHeight / 2;
-        info.SetAnchor(UiAnchor.Middle);
+        var contentHeight = hasGoal
+            ? nextGoalText.Y + nextGoalText.Height
+            : fameY + fameLabel.Height;
+
+        info.Resize(DetailWidth, contentHeight);
+        info.X = DetailX;
+        info.Y = DetailY;
         _detailScreen.AddChild(info);
     }
 
     private void BuildSkinList() {
-        const int rowGap = 2;
-        const int topInset = 5;
-        var visibleHeight = SkinListHeight - topInset - 2;
+        // Flash CharacterSkinListView: 442x400 at (351, 110) with 5px item padding;
+        // items are 420 wide (CharacterSkinListItem.WIDTH).
+        const int rowGap = 5;
+        const int rowWidth = 420;
+        var listWidth = SkinListWidth;
         var listClip = new Container(new ContainerConfig {
-            X = DetailDividerX + 2,
-            Y = TopSeparatorY + topInset,
-            Width = SkinListWidth - 2,
-            Height = visibleHeight,
+            X = SkinListX,
+            Y = SkinListY,
+            Width = listWidth,
+            Height = SkinListHeight800,
             EnableClip = true
         });
 
@@ -251,7 +281,6 @@ public sealed class ClassContainer : Container {
         var rowContainer = new Container { X = 5 };
         listClip.AddChild(rowContainer);
 
-        var rowWidth = SkinListWidth - 27;
         var rowIndex = 0;
         AddSkinRow(rowContainer, rowWidth, rowIndex++, _selectedClassType, 0, "Classic", false);
 
@@ -267,16 +296,16 @@ public sealed class ClassContainer : Container {
         }
 
         var contentHeight = rowIndex * (SkinChoiceRow.RowHeight + rowGap) - rowGap;
-        if (contentHeight <= visibleHeight) {
+        if (contentHeight <= SkinListHeight800) {
             return;
         }
 
         listClip.AddChild(new VerticalScrollBar(listClip, new VerticalScrollBarConfig {
-            X = SkinListWidth - 12,
+            X = listWidth - 12,
             Width = 10,
-            Height = visibleHeight,
+            Height = SkinListHeight800,
             TotalContentHeight = contentHeight,
-            VisibleContentHeight = visibleHeight,
+            VisibleContentHeight = SkinListHeight800,
             ScrollStep = SkinChoiceRow.RowHeight + rowGap,
             OnValueChanged = value => rowContainer.Y = -value
         }));
@@ -285,7 +314,7 @@ public sealed class ClassContainer : Container {
     private void AddSkinRow(Container parent, int width, int index, ushort textureType, ushort skinType,
         string name, bool locked) {
         var row = new SkinChoiceRow(width, textureType, skinType, name, locked, SelectSkin) {
-            Y = index * (SkinChoiceRow.RowHeight + 2)
+            Y = index * (SkinChoiceRow.RowHeight + 5)
         };
 
         parent.AddChild(row);
@@ -304,26 +333,27 @@ public sealed class ClassContainer : Container {
     }
 
     private void BuildDetailNavigation() {
+        // Flash: "back" 22pt at (30, 534), "play" 36pt centered at y = 520.
         _detailScreen.AddChild(new MenuBarButton(new TextButtonConfig {
             Text = "back",
-            FontSize = 32,
+            FontSize = 22,
             FontType = FontType.Bold,
             OutlineThickness = 4,
             OnClicked = ShowClassScreen,
-            X = 50,
-            Y = TitleMenuRibbon.MenuCenterY,
-            Anchor = UiAnchor.MiddleLeft
+            X = DetailBackX,
+            Y = DetailBackY,
+            Anchor = UiAnchor.LeftTop
         }));
 
         _detailScreen.AddChild(new MenuBarButton(new TextButtonConfig {
             Text = "play",
-            FontSize = 46,
+            FontSize = 36,
             FontType = FontType.Bold,
             OutlineThickness = 4,
             OnClicked = Play,
             X = _screenWidth / 2,
-            Y = TitleMenuRibbon.MenuCenterY,
-            Anchor = UiAnchor.Middle
+            Y = PlayButtonY,
+            Anchor = UiAnchor.MiddleTop
         }));
     }
 
@@ -339,28 +369,36 @@ public sealed class ClassContainer : Container {
         ScreenManager.FadeToScreen(new GameScreen(), Easing.SineInOut, 1000, 0x0);
     }
 
-    private static void AddDetailLabel(Container parent, string text, int x, int y) {
-        parent.AddChild(new SimpleText(new TextConfig {
+    private static SimpleText AddDetailLabel(Container parent, string text, int top) {
+        // Flash: 14pt bold labels right-justified at x = 205; y is the top edge.
+        var label = new SimpleText(new TextConfig {
             Text = text,
-            FontSize = 17,
+            FontSize = 14,
             FontType = FontType.Bold,
             Color = 0xFFFFFF,
-            X = x,
-            Y = y,
+            DropShadow = new DropShadowFilter(0, 0, 0, 1, 8, 8),
+            X = DetailStatsRightX,
             Anchor = UiAnchor.MiddleRight
-        }));
+        });
+
+        label.Y = top + label.Height / 2;
+        parent.AddChild(label);
+        return label;
     }
 
-    private static SimpleText AddDetailValue(Container parent, string text, int x, int y) {
+    private static SimpleText AddDetailValue(Container parent, string text, int top, uint color = 0xFFFFFF) {
+        // Flash: 16pt bold values left-aligned at x = 223.
         var value = new SimpleText(new TextConfig {
             Text = text,
-            FontSize = 17,
-            Color = 0xFFFFFF,
-            X = x,
-            Y = y,
+            FontSize = 16,
+            FontType = FontType.Bold,
+            Color = color,
+            DropShadow = new DropShadowFilter(0, 0, 0, 1, 8, 8),
+            X = DetailStatsValueX,
             Anchor = UiAnchor.MiddleLeft
         });
 
+        value.Y = top + value.Height / 2;
         parent.AddChild(value);
         return value;
     }
@@ -382,21 +420,34 @@ public sealed class ClassContainer : Container {
     }
 
     private static void AddDetailStars(Container parent, int earnedStars, int x, int y) {
+        // Flash StarsView: 0x252525 background with a 4px margin, filled white
+        // stars and 0x838383 empty stars.
         const int size = 16;
+        const int margin = 4;
+        const float emptyTint = 131f / 255f;
+        parent.AddChild(new ColorRect(new ColorRectConfig {
+            X = x,
+            Y = y,
+            Width = size * FameUtils.StarFameRequirements.Length + margin * 2,
+            Height = size + margin * 2,
+            Color = 0x252525,
+            Alpha = 1f
+        }));
+
         for (var i = 0; i < FameUtils.StarFameRequirements.Length; i++) {
             var star = new ObjectRect(new ObjectRectConfig {
                 Texture = TextureHelper.FromUiAtlas("CharacterList/StarGraphic"),
-                X = x + i * size,
-                Y = y,
+                X = x + margin + i * size,
+                Y = y + margin,
                 Width = size,
                 Height = size,
-                Anchor = UiAnchor.Middle,
+                Anchor = UiAnchor.LeftTop,
                 OutlineEnabled = false,
                 GlowEnabled = false
             });
 
             if (i >= earnedStars) {
-                star.ColorTransformation = new ColorTransform(0.45f, 0.45f, 0.45f, 1f);
+                star.ColorTransformation = new ColorTransform(emptyTint, emptyTint, emptyTint, 1f);
             }
 
             parent.AddChild(star);

@@ -378,12 +378,18 @@ public class Player : Entity {
             var dmg = Random.Shared.NextRange(projProps.MinDamage, projProps.MaxDamage); // Migrate to match server rng
             proj.Reset(bId, dmg, angle * MathHelper.RadToDeg, this, objProps, projProps, null, Position);
             Map.AddProjectile(proj);
-            
-            var shoot = PlayerShoot.CreatePacket();
-            shoot.Angle = angle;
-            
-            Client.QueuePacket(shoot);
         }
+
+        //One packet per attack: the server fans out NumShots around Angle
+        //itself and rejects a count that does not match the weapon.
+        var shoot = PlayerShoot.CreatePacket();
+        shoot.Time = Environment.TickCount;
+        shoot.StartingPos = new Position { X = Position.X, Y = Position.Y };
+        shoot.Angle = attackAngle;
+        shoot.Ability = false;
+        shoot.NumShots = props.NumProjectiles;
+
+        Client.QueuePacket(shoot);
     }
 
     private Vector2 ModifyMove(float x, float y) {

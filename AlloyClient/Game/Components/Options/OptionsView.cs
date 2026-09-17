@@ -13,8 +13,8 @@ public sealed class OptionsView : Overlay {
 
     public const int PanelWidth = Settings.DefaultScreenWidth;
     public const int PanelHeight = Settings.DefaultScreenHeight;
-    public const int HeaderHeight = 120;
-    public const int OptionsHeight = 507;
+    public const int HeaderHeight = 100;
+    public const int OptionsHeight = 424;
     
     public const string ControlsTab = "Controls";
     public const string HotkeysTab = "Hot Keys";
@@ -46,10 +46,10 @@ public sealed class OptionsView : Overlay {
 
         var titleText = new SimpleText(new TextConfig {
             Text = "Options",
-            FontSize = 43,
+            FontSize = 36,
             FontType = FontType.Bold,
             X = PanelWidth / 2,
-            Y = 10,
+            Y = 8,
             OutlineThickness = 2,
             Anchor = UiAnchor.MiddleTop
         });
@@ -70,31 +70,31 @@ public sealed class OptionsView : Overlay {
 
         var continueButton = new MenuBarButton(new TextButtonConfig {
             Text = "continue",
-            FontSize = 43,
+            FontSize = 36,
             OnClicked = OnContinue,
             X = PanelWidth / 2,
-            Y = TitleMenuRibbon.MenuCenterY,
-            Anchor = UiAnchor.Middle
+            Y = 520,
+            Anchor = UiAnchor.MiddleTop
         });
         AddChild(continueButton);
 
         var resetButton = new MenuBarButton(new TextButtonConfig {
             Text = "reset to defaults",
-            FontSize = 26,
+            FontSize = 22,
             OnClicked = OnResetToDefaults,
             X = 20,
-            Y = TitleMenuRibbon.MenuCenterY,
-            Anchor = UiAnchor.MiddleLeft
+            Y = 532,
+            Anchor = UiAnchor.LeftTop
         });
         AddChild(resetButton);
 
         var homeButton = new MenuBarButton(new TextButtonConfig {
             Text = "back to home",
-            FontSize = 26,
+            FontSize = 22,
             OnClicked = OnHome,
-            X = PanelWidth - 20,
-            Y = TitleMenuRibbon.MenuCenterY,
-            Anchor = UiAnchor.MiddleRight
+            X = 620,
+            Y = 532,
+            Anchor = UiAnchor.LeftTop
         });
         AddChild(homeButton);
 
@@ -104,18 +104,18 @@ public sealed class OptionsView : Overlay {
 
     private void AddTabs() {
         var first = true;
-        var xOffset = 22;
+        var xOffset = 14;
         for (var i = 0; i < Tabs.Length; i++) {
             var tabName = Tabs[i];
             var tab = new TextButton(new TextButtonConfig {
                 Text = tabName,
-                FontSize = 19,
+                FontSize = 16,
                 FontType = FontType.Bold,
                 ActiveColor = 0xB3B3B3,
                 HoverColor = 0xFFFFFF,
                 InactiveColor = 0xFFC800,
                 X = xOffset,
-                Y = 84,
+                Y = 70,
                 Anchor = UiAnchor.LeftTop
             });
             tab.AddEventListener(MouseEvent.LeftClick, OnSelectTab);
@@ -135,7 +135,7 @@ public sealed class OptionsView : Overlay {
                 SelectTab(tab);
             }
 
-            xOffset += 172;
+            xOffset += 108;
         }
     }
 

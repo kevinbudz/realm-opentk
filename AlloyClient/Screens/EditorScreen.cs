@@ -18,7 +18,7 @@ public sealed class EditorScreen : Screen {
     private const int BaseWidth = Settings.DefaultScreenWidth;
     private const int BaseHeight = Settings.DefaultScreenHeight;
     private const int PaletteWidth = EditorPalette.PanelWidth;
-    private const int PaletteMargin = 15;
+    private const int PaletteMargin = 4;
     private const int ToolbarWidth = 30;
     private const int ToolbarHeight = 220;
     private const int MapSelectorWidth = 150;
@@ -149,8 +149,8 @@ public sealed class EditorScreen : Screen {
 
     private void BuildToolBar() {
         _toolButtons.AddChild(new CutEdgeRect(new CutEdgeConfig {
-            Width = ToolbarWidth, Height = ToolbarHeight, CutX = 5, CutY = 5,
-            Color = 0x565656, Alpha = 0.8f
+            Width = ToolbarWidth, Height = ToolbarHeight, CutX = 4, CutY = 4,
+            Color = 0x363636, Alpha = 1f
         }));
 
         _root.AddChild(_toolButtons);
@@ -175,8 +175,8 @@ public sealed class EditorScreen : Screen {
         });
 
         selector.AddChild(new CutEdgeRect(new CutEdgeConfig {
-            Width = MapSelectorWidth, Height = MapSelectorHeight, CutX = 6, CutY = 6,
-            Color = 0x565656, Alpha = 0.8f, MouseEnabled = true
+            Width = MapSelectorWidth, Height = MapSelectorHeight, CutX = 4, CutY = 4,
+            Color = 0x363636, Alpha = 1f, MouseEnabled = true
         }));
 
         _mapTabs = new Container(new ContainerConfig { Width = MapSelectorWidth, Height = 1 });
@@ -278,8 +278,8 @@ public sealed class EditorScreen : Screen {
     private Container BuildLeftToolbox() {
         var box = new Container(new ContainerConfig { X = 15, Width = 120, Height = 194 });
         box.AddChild(new CutEdgeRect(new CutEdgeConfig {
-            Width = 120, Height = 194, CutX = 6, CutY = 6,
-            Color = 0x565656, Alpha = 0.8f, MouseEnabled = true
+            Width = 120, Height = 194, CutX = 4, CutY = 4,
+            Color = 0x363636, Alpha = 1f, MouseEnabled = true
         }));
 
         box.AddChild(new SimpleText(new TextConfig {
@@ -1122,7 +1122,7 @@ public sealed class EditorScreen : Screen {
 
     private SimpleText AddLabel(int x, int y, UiAnchor anchor) {
         var label = new SimpleText(new TextConfig {
-            Text = string.Empty, FontSize = 18, FontType = FontType.Bold,
+            Text = string.Empty, FontSize = 12, FontType = FontType.Bold,
             X = x, Y = y, Anchor = anchor, Color = 0xFFFFFF
         });
 

@@ -6,10 +6,13 @@ using OpenTK.Mathematics;
 namespace AlloyClient.Game.Components.Options.OptionTypes;
 
 public class SliderOption : Option {
-    private const int BarWidth = 128;
-    private const int BarHeight = 51;
-    private const int TrackX = 10;
+    private const int BarWidth = 80;
+    private const int BarHeight = 32;
+    private const int TrackX = 6;
     private const int TrackWidth = BarWidth - TrackX * 2;
+    private const int TrackHeight = 2;
+    private const int HandleWidth = 4;
+    private const int HandleHeight = 11;
 
     private readonly ValueSetting<float> _setting;
     private readonly Action<float> _sliderCallback;
@@ -44,26 +47,26 @@ public class SliderOption : Option {
 
         var track = new ColorRect(new ColorRectConfig {
             X = TrackX,
-            Y = BarHeight / 2 - 2,
+            Y = BarHeight / 2 - TrackHeight / 2,
             Width = TrackWidth,
-            Height = 4,
+            Height = TrackHeight,
             Color = 0x1F1F1F
         });
         AddChild(track);
 
         _fill = new ColorRect(new ColorRectConfig {
             X = TrackX,
-            Y = BarHeight / 2 - 2,
+            Y = BarHeight / 2 - TrackHeight / 2,
             Width = 1,
-            Height = 4,
+            Height = TrackHeight,
             Color = 0xB3B3B3
         });
         AddChild(_fill);
 
         _handle = new ColorRect(new ColorRectConfig {
-            Y = BarHeight / 2 - 9,
-            Width = 6,
-            Height = 18,
+            Y = BarHeight / 2 - HandleHeight / 2,
+            Width = HandleWidth,
+            Height = HandleHeight,
             Color = 0xFFFFFF
         });
         AddChild(_handle);

@@ -98,7 +98,7 @@ namespace AlloyClient.Game.Components.Hud.Inventory
             {
                 Width = TabWidth,
                 Height = TabHeight,
-                Radius = 9,
+                Radius = 4,
                 Corners = CutEdges.Top,
                 Color = currentTabIndex == tabKey ? SelectedTabColor : TabColor,
                 MouseEnabled = true

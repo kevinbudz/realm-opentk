@@ -16,11 +16,11 @@ public abstract class Option : Sprite {
         if (!string.IsNullOrEmpty(desc)) {
             DescText = new SimpleText(new TextConfig {
                 Text = desc,
-                FontSize = 25,
+                FontSize = 18,
                 OutlineThickness = 2,
                 Color = 0xB3B3B3,
-                X = KeyCodeBox.BoxWidth + 38,
-                Y = (KeyCodeBox.BoxHeight - 25) / 2,
+                X = KeyCodeBox.BoxWidth + 24,
+                Y = (KeyCodeBox.BoxHeight - 18) / 2 - 2,
             });
             AddChild(DescText);
         }

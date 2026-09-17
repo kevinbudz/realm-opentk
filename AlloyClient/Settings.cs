@@ -22,7 +22,7 @@ public static class Settings {
     private const string LocalFolderName = "AlloyClient";
     private const string AccountFileName = "account.xml";
     private const string SettingsFileName = "settings.xml";
-    private const int NativeWindowSettingsVersion = 1;
+    private const int NativeWindowSettingsVersion = 2;
 
     private readonly static string AccountFilePath;
     private readonly static string SettingsFilePath;
@@ -239,9 +239,10 @@ public static class Settings {
 
         if (storedWindowSettingsVersion < NativeWindowSettingsVersion) {
             // Existing installations may still contain a window size saved while
-            // Alloy's native design was 1280x720. Reset it once to the Flash
-            // client's 800x600 native size; subsequent user resizes keep saving
-            // and restoring normally under the current version.
+            // Alloy's native design was 1280x720 (or a stale size persisted at
+            // settings version 1). Reset it once to the Flash client's 800x600
+            // native size; subsequent user resizes keep saving and restoring
+            // normally under the current version.
             LastWindowWidth.Set(DefaultScreenWidth);
             LastWindowHeight.Set(DefaultScreenHeight);
             WindowSettingsVersion.Set(NativeWindowSettingsVersion);

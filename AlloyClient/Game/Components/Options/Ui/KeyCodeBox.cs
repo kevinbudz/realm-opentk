@@ -7,8 +7,8 @@ using OpenTK.Platform;
 namespace AlloyClient.Game.Components.Options.Ui;
 
 public class KeyCodeBox : Sprite {
-    public const int BoxWidth = 128;
-    public const int BoxHeight = 51;
+    public const int BoxWidth = 80;
+    public const int BoxHeight = 32;
 
     private readonly static string[] CharCodes = [
         "[Unset]", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
@@ -58,7 +58,7 @@ public class KeyCodeBox : Sprite {
         AddChild(_background);
 
         _char = new SimpleText(new TextConfig {
-            Text = CharCodes[(int)_keyCode], FontSize = 25, FontType = FontType.Bold, X = BoxWidth / 2, Y = BoxHeight / 2, OutlineThickness = 2, Anchor = UiAnchor.Middle
+            Text = CharCodes[(int)_keyCode], FontSize = 16, FontType = FontType.Bold, X = BoxWidth / 2, Y = BoxHeight / 2, OutlineThickness = 2, Anchor = UiAnchor.Middle
         });
         AddChild(_char);
 

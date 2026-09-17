@@ -215,9 +215,8 @@ public sealed class Projectile : IResettable { // TODO: make struct
             NotificationLayer.AddStatusText(target, $"-{_damage}", 0xFF0000, 1000, 0);
             
             var hit = PlayerHit.CreatePacket();
-            hit.BulletId = (ushort)_key.Id;
-            hit.ObjectId = _key.EntityId;
-            
+            hit.BulletId = (int)_key.Id;
+
             Client.QueuePacket(hit);
 
             if (!_multiHit) {
@@ -238,9 +237,10 @@ public sealed class Projectile : IResettable { // TODO: make struct
         NotificationLayer.AddStatusText(enemy, $"-{_damage}", 0xFF0000, 1000, 0);
         
         var hit1 = EnemyHit.CreatePacket();
-        hit1.BulletId = (ushort)_key.Id;
+        hit1.Time = Environment.TickCount;
+        hit1.BulletId = (int)_key.Id;
         hit1.TargetId = enemy.ObjectId;
-        
+
         Client.QueuePacket(hit1);
         
         if (!_multiHit) {

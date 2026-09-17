@@ -55,14 +55,22 @@ public sealed class InteractPanel : Sprite {
         if (panel == _currentPanel) {
             return;
         }
-        
+
         RemoveChild(_currentPanel);
         _currentPanel = panel;
 
         if (_currentPanel == null)
             return;
-        
+
+        PositionPanel(_currentPanel);
         AddChild(_currentPanel);
+    }
+
+    // Flash InteractPanel.positionPanelAndAdd centers grid panels in the
+    // 200px HUD slot and places every other panel at (6, 8).
+    private static void PositionPanel(Panel panel) {
+        panel.Y = 8;
+        panel.X = panel is ContainerPanel ? (HudView.HudWidth - panel.Width) / 2 : 6;
     }
     
     public static bool IsInteractiveObject(Entity entity) {

@@ -13,14 +13,15 @@ using AlloyClient.Ui.Components.Buttons;
 using AlloyClient.Ui.Components.Dialogs;
 using AlloyClient.Ui.Components.Graphics;
 using AlloyClient.Ui.Components.Scrollbars;
+using AlloyClient.Ui.Flash;
 using AlloyClient.Utils;
 
 namespace AlloyClient.Screens;
 
 public class CharacterListScreen : TitleScreenBase {
-    private const int PlayFontSize = 48;
-    private const int FontSize = 30;
-    private const int TabY = 70;
+    private const int PlayFontSize = 36;
+    private const int FontSize = 22;
+    private const int TabY = 79;
     private const int ContentBottomY = TitleMenuRibbon.TopY;
 
     private readonly Container _content = new(new ContainerConfig {
@@ -98,12 +99,13 @@ public class CharacterListScreen : TitleScreenBase {
 
         #region Decoration
 
+        // Flash centers its 2px 0x545454 divider on y=105; this rect is top-anchored.
         _lineDivider = new ColorRect(new ColorRectConfig {
-            Y = 100,
+            Y = 104,
             Width = Settings.DefaultScreenWidth,
             Height = 2,
-            Color = 0x777777,
-            Alpha = 0.75f
+            Color = 0x545454,
+            Alpha = 1f
         });
 
         _content.AddChild(_lineDivider);
@@ -117,16 +119,19 @@ public class CharacterListScreen : TitleScreenBase {
         //TODO: swap to simple text
         _nameText = new TextButton(new TextButtonConfig {
             Text = account?.Name ?? string.Empty,
-            FontSize = 32,
+            FontSize = 22,
             FontType = FontType.Bold,
             X = Settings.DefaultScreenWidth / 2,
-            Y = 50,
+            Y = 24,
             ActiveColor = 0xB3B3B3,
             InactiveColor = 0xB3B3B3,
+            DropShadow = FlashTextFilters.Default,
             Anchor = UiAnchor.Middle,
         });
 
         _content.AddChild(_nameText);
+        // Flash positions the name label by its top edge (y=24); this button is center-anchored.
+        _nameText.Y = 24 + _nameText.Height / 2;
 
         _goldIcon = new ObjectRect(new ObjectRectConfig {
             Texture = TextureHelper.FromGameAtlas("lofiObj3", 0xE1),
@@ -141,7 +146,7 @@ public class CharacterListScreen : TitleScreenBase {
 
         _goldText = new SimpleText(new TextConfig {
             Text = (account?.Stats.Credits ?? 0).ToString(),
-            FontSize = 24,
+            FontSize = 18,
             FontType = FontType.Normal,
             X = _goldIcon.X - _goldIcon.Width - 5,
             Y = _goldIcon.Y,
@@ -164,7 +169,7 @@ public class CharacterListScreen : TitleScreenBase {
 
         _fameText = new SimpleText(new TextConfig {
             Text = (account?.Stats.Fame ?? 0).ToString(),
-            FontSize = 24,
+            FontSize = 18,
             FontType = FontType.Normal,
             X = _fameIcon.X - _fameIcon.Width - 5,
             Y = _goldIcon.Y,
@@ -203,7 +208,10 @@ public class CharacterListScreen : TitleScreenBase {
 
         _charactersButton = new TextButton(new TextButtonConfig {
             Text = "Characters",
-            FontSize = 24,
+            FontSize = 18,
+            ActiveColor = 0xB3B3B3,
+            InactiveColor = 0xB3B3B3,
+            DropShadow = FlashTextFilters.Default,
             OnClicked = () => {
                 _characterListContainer.Visible = true;
                 _graveyardContainer.Visible = false;
@@ -215,7 +223,7 @@ public class CharacterListScreen : TitleScreenBase {
                 _graveyardButton.Alpha = 0.6f;
                 _charactersButton.Alpha = 1f;
             },
-            X = 15,
+            X = 10,
             Y = TabY,
             Anchor = UiAnchor.LeftTop
         });
@@ -224,7 +232,10 @@ public class CharacterListScreen : TitleScreenBase {
 
         _graveyardButton = new TextButton(new TextButtonConfig {
             Text = "Graveyard",
-            FontSize = 24,
+            FontSize = 18,
+            ActiveColor = 0xB3B3B3,
+            InactiveColor = 0xB3B3B3,
+            DropShadow = FlashTextFilters.Default,
             OnClicked = () => {
                 _graveyardContainer.Visible = true;
                 _characterListContainer.Visible = false;

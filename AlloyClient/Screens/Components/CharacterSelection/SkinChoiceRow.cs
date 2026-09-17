@@ -7,11 +7,14 @@ using AlloyClient.Utils;
 namespace AlloyClient.Screens.Components.CharacterSelection;
 
 public sealed class SkinChoiceRow : Container {
-    public const int RowHeight = 65;
+    // Flash CharacterSkinListItem.WIDTH/HEIGHT and state colors:
+    // HIGHLIGHTED 0x7B7B7B, AVAILABLE 0x5A5A5A, LOCKED 0x282828.
+    // Hover and selected share the highlighted color in Flash.
+    public const int RowHeight = 60;
 
-    private const uint BackgroundColor = 0x242424;
-    private const uint HoverColor = 0x454545;
-    private const uint SelectedColor = 0x858585;
+    private const uint BackgroundColor = 0x5A5A5A;
+    private const uint HoverColor = 0x7B7B7B;
+    private const uint SelectedColor = 0x7B7B7B;
 
     private readonly ColorRect _background;
     private readonly Container _selectionMarker;
@@ -32,7 +35,7 @@ public sealed class SkinChoiceRow : Container {
             Width = width,
             Height = RowHeight,
             Color = BackgroundColor,
-            Alpha = 0.88f
+            Alpha = 1f
         });
 
         AddChild(_background);
@@ -60,12 +63,14 @@ public sealed class SkinChoiceRow : Container {
             }
         }
 
+        // Flash: name 18pt bold at (75, 15); radio 28x28 at (WIDTH - 28 - 15),
+        // vertically centered; fill 20x20 at (4, 4) with cut 2.
         AddChild(new SimpleText(new TextConfig {
             Text = name,
-            FontSize = 20,
+            FontSize = 18,
             FontType = FontType.Bold,
             Color = 0xFFFFFF,
-            X = 79,
+            X = 75,
             Y = RowHeight / 2,
             MaxWidth = width - 190,
             Anchor = UiAnchor.MiddleLeft
@@ -74,8 +79,8 @@ public sealed class SkinChoiceRow : Container {
         if (locked) {
             AddChild(new SimpleText(new TextConfig {
                 Text = "Locked",
-                FontSize = 16,
-                Color = 0xD0D0D0,
+                FontSize = 14,
+                Color = 0xFFFFFF,
                 X = width - 18,
                 Y = RowHeight / 2,
                 Anchor = UiAnchor.MiddleRight
@@ -83,16 +88,16 @@ public sealed class SkinChoiceRow : Container {
         }
 
         _selectionMarker = new Container(new ContainerConfig {
-            X = width - 36,
+            X = width - 29,
             Y = RowHeight / 2,
-            Width = 30,
-            Height = 30,
+            Width = 28,
+            Height = 28,
             Anchor = UiAnchor.Middle
         });
 
         _selectionMarker.AddChild(new CutEdgeRect(new CutEdgeConfig {
-            Width = 30,
-            Height = 30,
+            Width = 28,
+            Height = 28,
             CutX = 4,
             CutY = 4,
             Color = 0xFFFFFF
@@ -101,8 +106,8 @@ public sealed class SkinChoiceRow : Container {
         _selectionInterior = new CutEdgeRect(new CutEdgeConfig {
             X = 2,
             Y = 2,
-            Width = 26,
-            Height = 26,
+            Width = 24,
+            Height = 24,
             CutX = 3,
             CutY = 3,
             Color = BackgroundColor
@@ -110,12 +115,12 @@ public sealed class SkinChoiceRow : Container {
 
         _selectionMarker.AddChild(_selectionInterior);
         _selectionFill = new CutEdgeRect(new CutEdgeConfig {
-            X = 6,
-            Y = 6,
-            Width = 18,
-            Height = 18,
-            CutX = 3,
-            CutY = 3,
+            X = 4,
+            Y = 4,
+            Width = 20,
+            Height = 20,
+            CutX = 2,
+            CutY = 2,
             Color = 0xFFFFFF
         });
 

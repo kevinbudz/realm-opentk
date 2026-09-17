@@ -10,11 +10,11 @@ using AlloyClient.Utils;
 namespace AlloyClient.Editor.Ui;
 
 internal sealed class EditorPalette : Container {
-    public const int PanelWidth = 180;
-    private const int ElementSize = 42;
-    private const int ElementGap = 1;
+    public const int PanelWidth = 136;
+    private const int ElementSize = 50;
+    private const int ElementGap = 2;
     private const int ElementInset = 4;
-    private const int Columns = 4;
+    private const int Columns = 2;
     private const int ListTop = 40;
     private readonly CutEdgeRect _background;
     private readonly Container _elements;
@@ -33,8 +33,8 @@ internal sealed class EditorPalette : Container {
         _selected = selected;
 
         _background = new CutEdgeRect(new CutEdgeConfig {
-            Width = PanelWidth, Height = height, CutX = 6, CutY = 6,
-            Color = 0x565656, Alpha = 0.8f, MouseEnabled = true,
+            Width = PanelWidth, Height = height, CutX = 4, CutY = 4,
+            Color = 0x363636, Alpha = 1f, MouseEnabled = true,
         });
 
         AddChild(_background);
@@ -122,7 +122,7 @@ internal sealed class EditorPalette : Container {
             var selected = entry.Type == _selectedType;
             var hit = new CutEdgeRect(new CutEdgeConfig {
                 Width = ElementSize, Height = ElementSize, CutX = 3, CutY = 3,
-                Color = selected ? 0x777777u : 0x333333u,
+                Color = selected ? 0x7F7F7Fu : 0x363636u,
                 Alpha = selected ? 0.75f : 0.18f,
             });
 

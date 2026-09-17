@@ -6,6 +6,7 @@ using AlloyClient.Data;
 using AlloyClient.Display;
 using AlloyClient.Screens.Components;
 using AlloyClient.Ui.Components.Buttons;
+using AlloyClient.Ui.Flash;
 
 namespace AlloyClient.Screens;
 
@@ -26,15 +27,16 @@ public class ServersTitleScreen : TitleScreenBase {
             X = Settings.DefaultScreenWidth / 2,
             Y = 50,
             Anchor = UiAnchor.Middle,
+            DropShadow = FlashTextFilters.Default,
         });
 
         AddChild(serverTitle);
 
         var lineDivider = new ColorRect(new ColorRectConfig {
-            Y = 100,
+            Y = 105,
             Width = Settings.DefaultScreenWidth,
-            Height = 5,
-            Color = 0x404040,
+            Height = 2,
+            Color = 0x545454,
         });
 
         AddChild(lineDivider);
@@ -49,6 +51,8 @@ public class ServersTitleScreen : TitleScreenBase {
             X = Settings.DefaultScreenWidth / 2,
             Text = "Selected Server:",
             FontSize = 22,
+            FontType = FontType.Bold,
+            DropShadow = FlashTextFilters.Default,
         });
 
         AddChild(selectedServerText);

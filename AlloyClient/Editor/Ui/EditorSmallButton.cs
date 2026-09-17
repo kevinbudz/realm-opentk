@@ -7,7 +7,7 @@ namespace AlloyClient.Editor.Ui;
 internal sealed class EditorSmallButton : Container {
 
     public EditorSmallButton(string text, Action clicked) : base(new ContainerConfig()) {
-        var label = new SimpleText(new TextConfig { Text = text, FontSize = 19, FontType = FontType.Bold, Color = 0xFFFFFF });
+        var label = new SimpleText(new TextConfig { Text = text, FontSize = 16, FontType = FontType.Bold, Color = 0xFFFFFF });
         var width = label.Width + 10;
         var height = label.Height + 5;
         Resize(width, height);

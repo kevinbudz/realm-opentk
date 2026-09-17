@@ -65,8 +65,8 @@ public class OptionTabView : Container {
                 continue;
             }
 
-            option.X += i % 2 == 0 ? 32 : 664;
-            option.Y += i / 2 * 70 + 22;
+            option.X += i % 2 == 0 ? 20 : 415;
+            option.Y += i / 2 * 44 + 22;
 
             _container.AddChild(option);
 

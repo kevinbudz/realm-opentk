@@ -303,6 +303,8 @@ public sealed class ItemTile : Sprite {
 
                 var swap = InvSwap.CreatePacket();
 
+                swap.Time = Environment.TickCount;
+                swap.NewPosition = new Position { X = Owner.Position.X, Y = Owner.Position.Y };
                 swap.SlotObj1 = new ObjectSlot {
                     ObjectId = Owner.ObjectId,
                     SlotId = SlotId
@@ -322,10 +324,7 @@ public sealed class ItemTile : Sprite {
                 break; // add to first free slot
             case GameScreen:
                 var drop = InvDrop.CreatePacket();
-                drop.SlotObject = new ObjectSlot {
-                    ObjectId = Owner.ObjectId,
-                    SlotId = SlotId
-                };
+                drop.SlotId = SlotId;
 
                 Client.QueuePacket(drop);
 
