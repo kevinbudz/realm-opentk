@@ -158,6 +158,13 @@ public static class Map {
     public static int LocalPlayerId;
     public static Player LocalPlayer;
 
+    //Own-bullet ids, mirroring the Flash client's map_.nextProjectileId_:
+    //both client and server start at 0 and decrement per shot so EnemyHit
+    //ids match the server's ShotProjectiles keys.
+    public static int NextProjectileId;
+    //Fake ids for foreign (ally/ability) visuals the server never issued.
+    public static int NextFakeBulletId;
+
     public static int LastTickId;
 
     public readonly static Signal<Player> OnPlayerUpdate = new();
@@ -530,6 +537,8 @@ public static class Map {
 
         LocalPlayerId = 0;
         LocalPlayer = null;
+        NextProjectileId = 0;
+        NextFakeBulletId = 0;
 
         LastTickId = 0;
         

@@ -142,13 +142,14 @@ public static class Client {
 
         while (_receiveState.PacketReady()) {
             var pktId = (PacketId) _receiveState.ReadPacket(out var rdr);
+            var pkt = PacketUtils.CreateIncomingPacket(pktId);
             try {
                 // Logger.Debug($"RECEIVING {pktId}");
-                var pkt = PacketUtils.CreateIncomingPacket(pktId);
                 pkt.Read(ref rdr);
                 IncomingQueue.Enqueue(pkt);
             } catch (Exception ex) {
                 Logger.Log(LogLevel.Error, $"Error handling message {pktId}: {ex.Message}");
+                pkt.ReturnPacket();
             }
         }
 
@@ -159,10 +160,15 @@ public static class Client {
         SendPendingPackets();
 
         while (IncomingQueue.TryDequeue(out var packet)) {
-            PacketLogger.LogPacket(packet);
+            try {
+                PacketLogger.LogPacket(packet);
 
-            packet.Handle();
-            packet.ReturnPacket();
+                packet.Handle();
+            } catch (Exception ex) {
+                Logger.Log(LogLevel.Error, $"Error in handler {packet.PacketId}: {ex.Message}");
+            } finally {
+                packet.ReturnPacket();
+            }
         }
     }
 
@@ -199,12 +205,19 @@ public static class Client {
     }
 
     public static void QueuePacket(IOutgoingPacket pkt) {
-        if (pkt.PacketId == PacketId.Unknown)
-            return;
+        try {
+            if (pkt.PacketId == PacketId.Unknown)
+                return;
 
-        lock (_sendState) {
-            _sendState.WritePacket(pkt, (byte) pkt.PacketId);
-            // Logger.Debug($"SENDING {pkt.PacketId}");
+            lock (_sendState) {
+                _sendState.WritePacket(pkt, (byte) pkt.PacketId);
+                // Logger.Debug($"SENDING {pkt.PacketId}");
+            }
+        } finally {
+            //WritePacket serializes synchronously, so the packet is free
+            //to pool again immediately; never returning it starved the
+            //pool into an allocation per packet.
+            pkt.ReturnPacket();
         }
     }
 

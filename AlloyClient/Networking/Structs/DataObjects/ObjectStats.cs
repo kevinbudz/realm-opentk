@@ -19,18 +19,25 @@ public struct ObjectStats : IDataObject {
     }
 
     public void Read(ref SpanReader reader) {
+        Read(ref reader, ref StatsPool, ref StatsPoolIndex);
+    }
+
+    //Per-packet overload: the shared static pool aliases across queued
+    //packets (network thread reads ahead of the game thread's Handle),
+    //so Update/NewTick keep instance pools and read into those instead.
+    public void Read(ref SpanReader reader, ref StatData[] pool, ref int index) {
         Id = reader.ReadInt32();
         Position.Read(ref reader);
 
         var len = reader.ReadByte();
-        StatOffset = StatsPoolIndex;
+        StatOffset = index;
         StatCount = len;
 
-        if (StatsPoolIndex + len > StatsPool.Length)
-            Array.Resize(ref StatsPool, (StatsPoolIndex + len) * 2);
+        if (index + len > pool.Length)
+            Array.Resize(ref pool, (index + len) * 2);
 
         for (int i = 0; i < len; i++)
-            StatsPool[StatsPoolIndex++].Read(ref reader);
+            pool[index++].Read(ref reader);
     }
 
     public void Write(ref SpanWriter writer) {

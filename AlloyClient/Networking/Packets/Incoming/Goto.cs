@@ -21,16 +21,22 @@ public class Goto : IncomingPacket<Goto> {
     }
 
     public override void Handle() {
-        if (ObjectId == Map.LocalPlayer.ObjectId) {
-            Map.LocalPlayer.MoveTo(Pos.X, Pos.Y);
-            Map.LocalPlayer.TickPosition.X = Pos.X;
-            Map.LocalPlayer.TickPosition.Y = Pos.Y;
-            Map.LocalPlayer.PositionAtTick.X = Pos.X;
-            Map.LocalPlayer.PositionAtTick.Y = Pos.Y;
-
-            var gt = GotoAck.CreatePacket();
-            Client.QueuePacket(gt);
+        if (Map.LocalPlayer == null || ObjectId != Map.LocalPlayer.ObjectId) {
+            return;
         }
+
+        Map.LocalPlayer.MoveTo(Pos.X, Pos.Y);
+        Map.LocalPlayer.TickPosition.X = Pos.X;
+        Map.LocalPlayer.TickPosition.Y = Pos.Y;
+        Map.LocalPlayer.PositionAtTick.X = Pos.X;
+        Map.LocalPlayer.PositionAtTick.Y = Pos.Y;
+
+        //Ack with the live client clock, like the Flash client's
+        //gotoAck(time): a 0 timestamp reads as time-travel once the
+        //server's clock gate is established and gets rejected.
+        var gt = GotoAck.CreatePacket();
+        gt.Time = System.Environment.TickCount;
+        Client.QueuePacket(gt);
     }
 
     public override string ToString() {

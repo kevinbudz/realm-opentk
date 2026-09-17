@@ -3,7 +3,7 @@
 public class ChooseName : OutgoingPacket<ChooseName> {
     public string Name;
 
-    public override PacketId PacketId => PacketId.Unknown;
+    public override PacketId PacketId => PacketId.ChooseName;
 
     public override void Reset() {
         Name = string.Empty;

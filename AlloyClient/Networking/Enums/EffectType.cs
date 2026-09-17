@@ -1,22 +1,24 @@
-﻿namespace AlloyClient.Networking.Enums;
+namespace AlloyClient.Networking.Enums;
 
+//Wire values must match realm-server RotMG.Common.ShowEffectIndex and
+//realm-client ShowEffect.as. Do NOT reorder or renumber: every value is
+//explicit and new ids are appended at the end, never inserted.
 public enum EffectType {
+    Unknown = 0,
     Heal = 1, // target, color
     Teleport = 2, // pos1
     Stream = 3, // pos1, pos2, color
-    Throw = 4, // target, pos1, color, duration
-    Nova = 5, // target, radius, color
+    Throw = 4, // target, pos1, color (+ optional pos2.x = flight ms)
+    Nova = 5, // target, pos1.x = radius, color
     Poison = 6, // target, color
-    Trail = 7, // pos1, color
+    Line = 7, // target, pos1, color
     Burst = 8, // target, pos1, pos2, color
     Flow = 9, // target, pos1, color
-    Trap = 10, // target, radius, color
-    Lightning = 11, // target, pos1, color, particle size
+    Ring = 10, // target, pos1.x = radius, color
+    Lightning = 11, // target, pos1, color, pos2.x = particle size
     Collapse = 12, // target, pos1, pos2, color
-    ConeBlast = 13, // target, pos1, radius, color
-    Earthquake = 14, // oryx shake. TODO: add params
-    Flashing = 15, // target, color, period, cycles
-    ObjectToss = 16, //sprite=targetObjId, rotate,
-    Vortex = 17, // target, radius, color
-    FadeToBlack = 18 // fades screen to black over the course of x milliseconds
+    ConeBlast = 13, // target, pos1, pos2.x = radius, color
+    Jitter = 14, // camera shake
+    Flash = 15, // target, color, pos1
+    ThrowProjectile = 16 // pos1, pos2, color
 }

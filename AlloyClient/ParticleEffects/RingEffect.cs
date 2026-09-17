@@ -20,6 +20,12 @@ internal class RingEffect : ParticleEffect {
         Color = color;
     }
 
+    public RingEffect(Vector2 position, float radius, uint color) {
+        _position = position;
+        Radius = radius;
+        Color = color;
+    }
+
     public override bool Update(double time, double dt) {
         for (int i = 0; i < NUMPOINTS; i++) {
             float angle = i * 2 * MathF.PI / NUMPOINTS;

@@ -8,7 +8,9 @@ namespace AlloyClient.Networking;
 public ref struct SpanReader
 {
     public int Position { get; set; }
-    
+
+    public int Remaining => _span.Length - Position;
+
     private readonly bool _littleEndian;
     private readonly ReadOnlySpan<byte> _span;
     

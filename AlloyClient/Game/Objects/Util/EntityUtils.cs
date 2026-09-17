@@ -17,7 +17,7 @@ public static class EntityUtils {
             
             Vector2.DistanceSquared(in position, in entity.Position, out var distance);
             
-            if (distance <= radius && distance < closest) {
+            if (distance <= radius * radius && distance < closest) {
                 closest = distance;
                 interactable = entity;  
             }
@@ -36,7 +36,7 @@ public static class EntityUtils {
             if (entity == Map.LocalPlayer)
                 continue;
             
-            if (distance <= radius && distance < closestDistance) {
+            if (distance <= radius * radius && distance < closestDistance) {
                 closestDistance = distance;
                 closestEntity = entity;  
             }
@@ -55,7 +55,7 @@ public static class EntityUtils {
             if (IsCharacter(entity))
                 continue;
             
-            if (distance <= radius && distance < closestDistance) {
+            if (distance <= radius * radius && distance < closestDistance) {
                 closestDistance = distance;
                 closestEntity = entity;  
             }
@@ -75,7 +75,7 @@ public static class EntityUtils {
             
             Vector2.DistanceSquared(position, entity.Position, out var dist);
             
-            if (dist > radius || dist >= enDist)
+            if (dist > radius * radius || dist >= enDist)
                 continue;
             en = entity;
             enDist = dist;
@@ -95,7 +95,7 @@ public static class EntityUtils {
             
             Vector2.DistanceSquared(position, entity.Position, out var dist);
             
-            if (dist > radius || dist >= enDist)
+            if (dist > radius * radius || dist >= enDist)
                 continue;
             en = entity;
             enDist = dist;

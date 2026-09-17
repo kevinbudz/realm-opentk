@@ -1,35 +1,39 @@
-﻿using AlloyClient.Assets.Libraries;
+using AlloyClient.Assets.Libraries;
 using AlloyClient.Game;
 using AlloyClient.Game.Objects;
-using AlloyClient.Networking.Packets.Outgoing;
 using AlloyClient.Networking.Structs.DataObjects;
 using Microsoft.Extensions.Logging;
 
 namespace AlloyClient.Networking.Packets.Incoming;
 
 public class Update : IncomingPacket<Update> {
-    
+
     public override PacketId PacketId => PacketId.Update;
-    
-    private static TileDef[]  _tilesBuffer   = new TileDef[256];
-    private static ObjectDef[] _newObjsBuffer = new ObjectDef[256];
-    private static int[]       _dropsBuffer   = new int[256];
+
+    //Instance buffers: the network thread reads packets ahead of the game
+    //thread's Handle, so shared static buffers let a later packet
+    //overwrite an earlier queued one.
+    private TileDef[] _tilesBuffer = new TileDef[256];
+    private ObjectDef[] _newObjsBuffer = new ObjectDef[256];
+    private int[] _dropsBuffer = new int[256];
+    private StatData[] _statsPool = new StatData[4096];
+    private int _statsPoolIndex;
 
     public int TileCount;
     public int NewObjCount;
     public int DropCount;
 
-    public TileDef[]  Tiles   => _tilesBuffer;
+    public TileDef[] Tiles => _tilesBuffer;
     public ObjectDef[] NewObjs => _newObjsBuffer;
-    public int[]       Drops   => _dropsBuffer;
+    public int[] Drops => _dropsBuffer;
 
     public override void Reset() {
         TileCount = NewObjCount = DropCount = 0;
     }
 
     public override void Read(ref SpanReader reader) {
-        ObjectDef.StatsPoolIndex = 0;
-        
+        _statsPoolIndex = 0;
+
         TileCount = reader.ReadInt16();
         EnsureCapacity(ref _tilesBuffer, TileCount);
         for (int i = 0; i < TileCount; i++)
@@ -38,7 +42,7 @@ public class Update : IncomingPacket<Update> {
         NewObjCount = reader.ReadInt16();
         EnsureCapacity(ref _newObjsBuffer, NewObjCount);
         for (int i = 0; i < NewObjCount; i++)
-            _newObjsBuffer[i].Read(ref reader);
+            _newObjsBuffer[i].Read(ref reader, ref _statsPool, ref _statsPoolIndex);
 
         DropCount = reader.ReadInt16();
         EnsureCapacity(ref _dropsBuffer, DropCount);
@@ -47,15 +51,13 @@ public class Update : IncomingPacket<Update> {
             _ = reader.ReadBoolean();
         }
     }
-    
+
     private static void EnsureCapacity<T>(ref T[] array, int needed) {
         if (array.Length < needed)
             array = new T[needed * 2]; // double to avoid frequent resizes
     }
 
     public override void Handle() {
-        Client.QueuePacket(UpdateAck.CreatePacket());
-
         for (int i = 0; i < TileCount; i++)
             Map.SetTileData(Tiles[i].X, Tiles[i].Y, Tiles[i].Type);
 
@@ -89,7 +91,7 @@ public class Update : IncomingPacket<Update> {
 
             entity.SetPos(newObj.Position.X, newObj.Position.Y);
 
-            entity.UpdateStats(ObjectDef.StatsPool, newObj.StatOffset, newObj.StatCount);
+            entity.UpdateStats(_statsPool, newObj.StatOffset, newObj.StatCount);
             entity.OnTickPosition(newObj.Position.X, newObj.Position.Y, 0, 0, props.IsPlayer);
 
             if (newObj.Id == Map.LocalPlayerId) {

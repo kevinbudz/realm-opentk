@@ -17,7 +17,6 @@ using OpenTK.Mathematics;
 namespace AlloyClient.Game.Objects;
 
 public class Player : Entity {
-    private const int MaxProjectiles = 2000;
     private const float MoveThreshold = 0.4f;
     private const int FocusedSpeed = 15;
     private const float MinMoveSpeed = 0.004f;
@@ -40,7 +39,7 @@ public class Player : Entity {
 
     public bool Ignored;
 
-    public ushort NextBulletId = 0;
+
 
     #region StatData
 
@@ -373,12 +372,17 @@ public class Player : Entity {
             var startAngle = AttackAngle - arc / 2;
             var angle = startAngle + MathHelper.DegreesToRadians(props.ArcGap) * i;
 
-            var bId = GetBulletId();
+            //Bullet ids must stay in lockstep with the server: both start
+            //at 0 and decrement per shot, like the Flash client's
+            //map_.nextProjectileId_. The server keys ShotProjectiles by
+            //these ids, so any other scheme makes EnemyHit unknown.
+            var bId = Map.NextProjectileId - i;
             var proj = ObjectPools.Projectiles.Pop();
             var dmg = Random.Shared.NextRange(projProps.MinDamage, projProps.MaxDamage); // Migrate to match server rng
-            proj.Reset(bId, dmg, angle * MathHelper.RadToDeg, this, objProps, projProps, null, Position);
+            proj.Reset(bId, dmg, angle, this, objProps, projProps, null, Position);
             Map.AddProjectile(proj);
         }
+        Map.NextProjectileId -= props.NumProjectiles;
 
         //One packet per attack: the server fans out NumShots around Angle
         //itself and rejects a count that does not match the weapon.
@@ -596,12 +600,6 @@ public class Player : Entity {
         }
 
         return moveSpeed * MovementMultiplier;
-    }
-
-    public ushort GetBulletId() {
-        if (NextBulletId >= MaxProjectiles)
-            NextBulletId = 0;
-        return NextBulletId++;
     }
 
     private static bool IsFullOccupy(float x, float y) {

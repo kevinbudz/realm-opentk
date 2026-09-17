@@ -18,10 +18,10 @@ using OpenTK.Mathematics;
 
 namespace AlloyClient.Game.Objects;
 
-public readonly struct ProjectileKey(int entityId, uint id) {
-    public readonly ulong Key = ((ulong)entityId << 32) | id;
+public readonly struct ProjectileKey(int entityId, int id) {
+    public readonly ulong Key = ((ulong)(uint)entityId << 32) | (uint)id;
     public int EntityId => (int)(Key >> 32);
-    public uint Id => (uint)Key;
+    public int Id => (int)(Key & 0xFFFFFFFF);
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -74,6 +74,7 @@ public readonly struct EntityTexture(AtlasData uv, Vector4 scale) { // TODO: mov
 public sealed class Projectile : IResettable { // TODO: make struct
 
     private const double HitTestDelayMs = 16;
+    private const float HitRadius = 0.5f;
     
     // TODO: do something about proj paths
     public ProjectilePath Path;
@@ -97,11 +98,16 @@ public sealed class Projectile : IResettable { // TODO: make struct
     private float _rotation;
     private float _elapsed; // double
     private Vector2 _position;
+    private bool _ownedByLocalPlayer;
 
-    public void Reset(ushort id, int dmg, float angle, Entity entity, ObjectProperties objDesc, ProjectileProperties projDesc, ProjectilePath path, Vector2 startPos) {
+    //Angle is radians on the wire (server and Flash agree); paths consume
+    //it unchanged. Do NOT convert units here: EnemyShoot used to treat the
+    //server's radians as degrees, rotating every enemy bullet.
+    public void Reset(int id, int dmg, float angle, Entity entity, ObjectProperties objDesc, ProjectileProperties projDesc, ProjectilePath path, Vector2 startPos) {
         Path = path ?? projDesc.Path.Clone();
-        Path.SetInfo(new ProjectileInfo() { LifetimeMs = Path.LifetimeMs, ProjId = id, ShootAngle = angle * MathHelper.DegToRad, StartPos = startPos});
+        Path.SetInfo(new ProjectileInfo() { LifetimeMs = Path.LifetimeMs, ProjId = id, ShootAngle = angle, StartPos = startPos});
         _position = _startPosition = startPos;
+        _ownedByLocalPlayer = entity is Player && entity.ObjectId == Map.LocalPlayerId;
         
         /*===== new =====*/
         _key = new ProjectileKey(entity.ObjectId, id);
@@ -187,35 +193,51 @@ public sealed class Projectile : IResettable { // TODO: make struct
             var tile = Map.LookupTile(pos);
 
             if (tile == null || tile.Type == 0xFF) {
+                OnBlocked();
                 return false; // TODO: hit effect
             }
-        
+
             if (tile.OccupiedObject != null) {
                 var obj = tile.OccupiedObject.Properties;
                 if ((!obj.IsEnemy || _damagePlayers) && (obj.EnemyOccupySquare || !_passesCover && obj.OccupySquare)) {
+                    OnBlocked();
                     return false; // TODO: hit effect
                 }
             }
         }
-        
+
         _position = pos;
         return true;
     }
-    
+
+    //Enemy bullets report wall/cover deaths, like the Flash client; own
+    //bullets never report square hits.
+    private void OnBlocked() {
+        if (!_damagePlayers)
+            return;
+
+        var hit = SquareHit.CreatePacket();
+        hit.Time = Environment.TickCount;
+        hit.BulletId = _key.Id;
+        Client.QueuePacket(hit);
+    }
+
     private bool HitTest(double time) {
         if (_damagePlayers) {
-
-            var target = EntityUtils.GetClosestPlayer(_position, 0.5f);
-
-            if (target == null || target.MultiHitUsed.ContainsKey(_key)) {
+            //Enemy bullets can only hit the local player, like the Flash
+            //client (map_.player_): testing every player and reporting the
+            //contact as a local hit blamed the wrong bullet ids.
+            var target = Map.LocalPlayer;
+            if (target == null || target.MultiHitUsed.ContainsKey(_key) ||
+                !WithinHitbox(target.Position)) {
                 return false;
             }
-            
+
             Map.AddParticleEffect(new HitEffect(target, 0xFF0000));
             NotificationLayer.AddStatusText(target, $"-{_damage}", 0xFF0000, 1000, 0);
-            
+
             var hit = PlayerHit.CreatePacket();
-            hit.BulletId = (int)_key.Id;
+            hit.BulletId = _key.Id;
 
             Client.QueuePacket(hit);
 
@@ -227,27 +249,43 @@ public sealed class Projectile : IResettable { // TODO: make struct
             return false;
         }
 
-        var enemy = EntityUtils.GetClosestEnemy(_position, 0.5f);
+        var enemy = EntityUtils.GetClosestEnemy(_position, HitRadius);
 
         if (enemy == null || enemy.MultiHitUsed.ContainsKey(_key)) {
             return false;
         }
 
+        //Foreign (ally/ability) visuals fly with fake ids the server never
+        //issued: they despawn on contact but report nothing.
+        if (!_ownedByLocalPlayer) {
+            if (!_multiHit)
+                return true;
+            enemy.MultiHitUsed.Add(_key, time + Path.LifetimeMs);
+            return false;
+        }
+
         Map.AddParticleEffect(new HitEffect(enemy, 0xFF0000));
         NotificationLayer.AddStatusText(enemy, $"-{_damage}", 0xFF0000, 1000, 0);
-        
+
         var hit1 = EnemyHit.CreatePacket();
         hit1.Time = Environment.TickCount;
-        hit1.BulletId = (int)_key.Id;
+        hit1.BulletId = _key.Id;
         hit1.TargetId = enemy.ObjectId;
 
         Client.QueuePacket(hit1);
-        
+
         if (!_multiHit) {
             return true;
         }
 
         enemy.MultiHitUsed.Add(_key, time + Path.LifetimeMs);
         return false;
+    }
+
+    //DistanceSquared is compared against the squared radius: comparing it
+    //against the raw radius nearly doubled the effective hitbox.
+    private bool WithinHitbox(Vector2 target) {
+        Vector2.DistanceSquared(_position, target, out var dist);
+        return dist <= HitRadius * HitRadius;
     }
 }
