@@ -232,19 +232,18 @@ internal static class EquipmentTooltipTests {
     }
 
     private static void TooltipLayout() {
-        // Title starts right of the 40px icon at (5,5).
-        Equal(48, EquipmentTooltipLayout.TitleX());
-        // Tier tag right edge insets 8px from the 230px tooltip edge...
-        Equal(222, EquipmentTooltipLayout.TierRightX());
+        // Title starts right of the 40px icon at (5,5) with Flash's 4px gap.
+        Equal(49, EquipmentTooltipLayout.TitleX());
+        // Tier tag right edge insets 6px from the 230px tooltip edge...
+        Equal(224, EquipmentTooltipLayout.TierRightX());
         // ...so the title wraps before the measured tag (T12 is 27px wide).
-        Equal(143, EquipmentTooltipLayout.TitleWidth(48, EquipmentTooltipLayout.TitleRight(222, 27)));
+        Equal(144, EquipmentTooltipLayout.TitleWidth(49, EquipmentTooltipLayout.TitleRight(224, 27)));
         // Without a tag the title may use the padded edge.
-        Equal(170, EquipmentTooltipLayout.TitleWidth(48, EquipmentTooltipLayout.TitleRight(null, null)));
+        Equal(169, EquipmentTooltipLayout.TitleWidth(49, EquipmentTooltipLayout.TitleRight(null, null)));
         // Title centers on the icon middle whatever its height...
         Equal(25, EquipmentTooltipLayout.TitleMiddleY());
-        // ...and the tier top-aligns with it (measured 2-line title 39, tag 20).
-        Equal(16, EquipmentTooltipLayout.TierMiddleY(25, 39, 20));
-        Equal(25, EquipmentTooltipLayout.TierMiddleY(25, 20, 20));
+        // ...and the tier centers there too, independent of either height.
+        Equal(25, EquipmentTooltipLayout.TierMiddleY(25));
         // Single- and double-line titles keep the description tucked at 48...
         Equal(48, EquipmentTooltipLayout.DescY(25, 20));
         Equal(48, EquipmentTooltipLayout.DescY(25, 39));

@@ -11,9 +11,23 @@ public abstract class Tooltip : Sprite {
 
     protected Tooltip(int width, int height) {
         TooltipMode = true;
+        // Flash ToolTip disables mouse input so the tooltip never steals hover.
+        MouseEnabled = false;
 
         ToolWidth = width;
         ToolHeight = height;
+    }
+
+    // Flash ToolTip.forcePostionLeft: pin the tooltip left/above the cursor.
+    public void ForcePositionLeft() {
+        ForceTooltipLeft = true;
+        ForceTooltipRight = false;
+    }
+
+    // Flash ToolTip.forcePostionRight: pin the tooltip right/below the cursor.
+    public void ForcePositionRight() {
+        ForceTooltipRight = true;
+        ForceTooltipLeft = false;
     }
 
     public virtual void DrawSprite() {

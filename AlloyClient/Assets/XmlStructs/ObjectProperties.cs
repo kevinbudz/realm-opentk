@@ -37,6 +37,9 @@ public class ObjectProperties {
     public readonly bool NoMiniMap;
     public readonly bool DrawOnGround;
 
+    public readonly bool Flying;
+    public readonly bool ProtectFromSink;
+
     public readonly int RealSize;
     public readonly int MinSize;
     public readonly int MaxSize;
@@ -90,6 +93,9 @@ public class ObjectProperties {
         Static = e.GetValue<bool>("Static");
         NoMiniMap = e.GetValue<bool>("NoMiniMap");
         DrawOnGround = e.GetValue<bool>("DrawOnGround");
+
+        Flying = e.HasElement("Flying");
+        ProtectFromSink = e.HasElement("ProtectFromSink");
 
         RealSize = e.GetValue<int>("RealSize", -1);
         MinSize = e.GetValue<int>("MinSize");

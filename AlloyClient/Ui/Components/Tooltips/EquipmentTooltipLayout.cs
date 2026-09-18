@@ -10,12 +10,12 @@ namespace AlloyClient.Ui.Components.Tooltips;
 public static class EquipmentTooltipLayout {
     public const int MaxWidth = 230;
     public const int IconSize = 40;
-    public const int IconXY = 5;
+    public const int IconXY = 8;
     public const int Padding = 8;
     public const int Gap = 4;
 
-    // Title starts right of the icon.
-    public static int TitleX() => IconXY + IconSize + 3;
+    // Title starts right of the icon (Flash icon.width + 4 gap).
+    public static int TitleX() => IconXY + IconSize + 4;
 
     // Right edge available to the title: left edge of the measured tier tag,
     // or the padded tooltip edge when there is no tag.
@@ -24,17 +24,17 @@ public static class EquipmentTooltipLayout {
 
     public static int TitleWidth(int titleX, int titleRight) => titleRight - titleX - Gap;
 
-    // Tier tag is right-anchored, so X is its right edge: inset from the
-    // tooltip edge instead of overflowing past it.
-    public static int TierRightX() => MaxWidth - Padding;
+    // Tier tag is right-anchored, so X is its right edge: 6px inside the
+    // tooltip edge, matching the Flash background inset.
+    public static int TierRightX() => MaxWidth - 6;
 
     // MiddleLeft-anchored title centers on the icon middle, so multi-line
     // titles grow symmetrically instead of hanging below the sprite.
-    public static int TitleMiddleY() => IconXY + IconSize / 2;
+    public static int TitleMiddleY() => IconXY + IconSize / 2 + 2;
 
-    // MiddleRight-anchored tier top-aligns with the title (Flash behavior).
-    public static int TierMiddleY(int titleMiddleY, int titleH, int tierH) =>
-        titleMiddleY - (titleH - tierH) / 2;
+    // MiddleRight-anchored tier centers on the icon middle exactly like the
+    // title (Flash centers both on icon.height / 2, independently of height).
+    public static int TierMiddleY(int titleMiddleY) => titleMiddleY;
 
     // Description starts below the icon, pushed down when a wrapped title
     // extends past it.

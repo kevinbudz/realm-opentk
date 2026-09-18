@@ -265,6 +265,73 @@ public class Entity {
         return true;
     }
 
+    // Flash parity: TextureRedrawer scales sprites 5x and one atlas texel
+    // covers 0.1 world units, so one Flash pixel of sink clips 0.02 worlds.
+    public const float SinkPixelToWorld = 0.02f;
+
+    // Flash parity for GameObject.draw's h2 = tile sink + sinkLevel, zeroed
+    // while flying or standing on a ProtectFromSink object. Pure for testability.
+    public static float ComputeSinkHeight(bool flying, bool protectFromSink, bool tileSink, bool tileOverlay, int sinkLevel) {
+        if (flying || protectFromSink) {
+            return 0f;
+        }
+
+        var px = 0;
+        if (tileSink) {
+            px += tileOverlay ? 6 : 12; // Square.sink_: 12, or 6 on redrawn (blended) tiles
+        }
+
+        if (sinkLevel > 0) {
+            px += sinkLevel;
+        }
+
+        return px * SinkPixelToWorld;
+    }
+
+    // World-space sink clip: Drop lowers the head side by the Flash pixel
+    // count, Rise lifts the feet side by the atlas/flash margin difference
+    // (Alloy pads 1 texel per side, Flash's texture has 12px top / 1px bottom
+    // margins: 5k-1 px) so the visible rows and below-feet line match Flash.
+    public readonly record struct SinkClip(float Drop, float Rise);
+
+    public static float ComputeSinkRise(float sizeScale) =>
+        MathF.Max(0f, (5f * sizeScale - 1f) * SinkPixelToWorld);
+
+    public static SinkClip ComputeSinkClip(bool flying, bool protectFromSink, bool tileSink, bool tileOverlay, int sinkLevel, float sizeScale) {
+        if (flying || protectFromSink) {
+            return default;
+        }
+
+        var px = 0;
+        if (tileSink) {
+            px += tileOverlay ? 6 : 12; // Square.sink_: 12, or 6 on redrawn (blended) tiles
+        }
+
+        if (sinkLevel > 0) {
+            px += sinkLevel;
+        }
+
+        if (px <= 0) {
+            return default;
+        }
+
+        return new SinkClip(px * SinkPixelToWorld, ComputeSinkRise(sizeScale));
+    }
+
+    // World-space sink clip from the entity's live state. Only players
+    // accumulate a sink level; mobs sink from the tile alone.
+    public SinkClip GetSinkClip() {
+        var tile = Tile;
+        var props = Properties;
+        if (tile == null || props == null) {
+            return default;
+        }
+
+        var sinkLevel = this is Player player ? player.SinkLevel : 0;
+        return ComputeSinkClip(props.Flying, tile.OccupiedObject?.Properties?.ProtectFromSink == true,
+            tile.GroundProperties.Sink, tile.HasOverlay, sinkLevel, Size / 100f);
+    }
+
     public void OnTickPosition(float x, float y, double tickTime, int tickId, bool isPlayer) {
         if (!Settings.MovementInterpolation && LastTickId < Map.LastTickId && !isPlayer) {
             MoveTo(TickPosition.X, TickPosition.Y);

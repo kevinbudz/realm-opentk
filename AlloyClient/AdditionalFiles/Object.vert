@@ -106,6 +106,28 @@ void main() {
     vec4 position = vec4(objPos[verId], 0, 1);
     position.xy *= data.Scale.xy;
 
+    // Flash-parity sinking (GameObject.draw h2): the head side lowers by the
+    // Flash pixel count while the feet stay planted. CPU packs world-space
+    // amounts in Mask1 (x = drop, y = rise). Local +Y is the feet side (atlas
+    // V runs head->feet with BaseUV.y). Rise eats Alloy's deeper bottom pad
+    // (minus Flash's 1px bottom margin) so visible rows and the below-feet
+    // line match Flash; head texels stay glued.
+    vec2 baseUV = GetUV(objUV[verId], data.Rotation.w);
+    if (data.Extra.Type == TypeGameObject && data.Mask1.x > 0.0) {
+        float fullH = data.Scale.y * data.Rotation.z;
+        if (fullH > 0.0001) {
+            float dropFrac = clamp(data.Mask1.x / fullH, 0.0, 0.95);
+            float riseFrac = clamp(data.Mask1.y / fullH, 0.0, 0.95 - dropFrac);
+            float halfH = 0.5 * data.Scale.y;
+            if (position.y < 0.0) {
+                position.y = -halfH + dropFrac * data.Scale.y;
+            } else {
+                position.y = halfH - riseFrac * data.Scale.y;
+            }
+            baseUV.y = baseUV.y * (1.0 - dropFrac - riseFrac);
+        }
+    }
+
     mat4 rotate = mat4(
         data.Rotation.y * data.Rotation.z, data.Rotation.x * data.Rotation.z, 0, data.Scale.z * data.Rotation.z * -data.Rotation.w,
         -data.Rotation.x * data.Rotation.z, data.Rotation.y * data.Rotation.z, 0, data.Scale.w * data.Rotation.z,
@@ -119,7 +141,7 @@ void main() {
     position.z = data.Extra.SortId;
     gl_Position = position;
     
-    vsOutput.BaseUV = GetUV(objUV[verId], data.Rotation.w);
+    vsOutput.BaseUV = baseUV;
     vsOutput.UV = data.UV;
     vsOutput.Extra = data.Extra;
     vsOutput.Color = data.Color;

@@ -23,10 +23,14 @@ public class MapTile(Vector2i position) {
     public GroundProperties GroundProperties = GroundLibrary.TypeToGroundProps[Const.DefaultTile];
     public TextureData TextureData = GroundLibrary.TypeToTextureData[Const.DefaultTile];
 
-    public Entity OccupiedObject { 
+    public Entity OccupiedObject {
         get;
         set => SetMinimapColor(field = value);
     }
+
+    // True once Rebuild adds blend/edge quads: the Flash equivalent of a
+    // redrawn Square texture, which sinks 6px instead of 12px.
+    public bool HasOverlay;
 
     private Color _color;
 
@@ -77,10 +81,12 @@ public class MapTile(Vector2i position) {
         // can be shrunk down to 48 bytes by making posOff vec4short & animate vec4h
         _data[0] = new TileData(new Vector4(X, Y, offx, offy), texture.ToVector4(), animate, new Vector4(-1));
         _dataCount = 1;
+        HasOverlay = false;
     }
 
     public void Rebuild(Span<MapTile> tiles) {
         _dataCount = TileBuilder.Build(this, _data.AsSpan(1, MaxTileData - 1), tiles) + 1;
+        HasOverlay = _dataCount > 1;
     }
 
     public TileData CloneWithBlend(int x, int y, Vector4 mask) {

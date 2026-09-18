@@ -69,9 +69,15 @@ public sealed class TypeGameObject : RenderBase {
         Rotation = new Vector4(s, c, k, f);
         
         Entity.HeightOffset = GetVisibleTopOffset(k);
-        
-        targets.Add(new VertexObject(Position, UV, Scale, Rotation, Extra, Color));
-        
+
+        // Flash-parity sinking: world-space clip packed in Mask1 (x = drop, y =
+        // rise), applied by Object.vert so the sprite sinks to Flash depth.
+        var sink = Entity.GetSinkClip();
+        var sprite = new VertexObject(Position, UV, Scale, Rotation, Extra, Color) {
+            Mask1 = new Vector4(sink.Drop, sink.Rise, 0f, 0f)
+        };
+        targets.Add(sprite);
+
         if (Entity.Properties.Static) {
             return;
         }
@@ -81,8 +87,9 @@ public sealed class TypeGameObject : RenderBase {
             _hpBar.SetFill(1f * Entity.Hp / maximumHp);
             _hpBar.Draw(TypeBar.BaseYOffset, targets, time);
         }
-        
-        _effects.Draw(Entity.HeightOffset, targets, time);
+
+        // Condition icons ride the sunk sprite top like Flash (vS_[1]).
+        _effects.Draw(Entity.HeightOffset + sink.Drop, targets, time);
     }
 
     public override void DrawShadow() {

@@ -37,21 +37,20 @@ public abstract class RenderBase : IComparable<RenderBase> {
     public virtual void SetTexture(AtlasData texture, bool attackFrame) {
         UV = texture.ToVector4();
 
-        var frameMult = attackFrame ? 2f : 1f;
-        var w = texture.RawW() - AtlasConfig.Padding * 2;
-        var h = texture.RawH() - AtlasConfig.Padding * 2;
-        
-        // this should be padding * 2 but the attack frame doesnt line up unless its 3 for some fucking reason
-        var padW = 1.0f + AtlasConfig.Padding * 3 / texture.RawW();
-        var padH = 1.0f + AtlasConfig.Padding * 3 / texture.RawH();
-        
-        var ratio = w / h / frameMult * MathF.Max(w / frameMult / 8, h / 8);
+        // Flash parity: TextureRedrawer.resize scales sprites 5x and the
+        // non-perspective camera maps one tile to 50 screen px, so every atlas
+        // texel (padding included) covers 0.1 tiles = 5 screen px at zoom 1.
+        // Uniform density keeps Nearest sampling integer (no stretched texel
+        // columns) and preserves the source aspect for non-square sprites.
+        var rawW = texture.RawW();
+        var rawH = texture.RawH();
+        var w = rawW - AtlasConfig.Padding * 2;
 
-        var widthScale = 0.75f * ratio * frameMult * padW;
-        var heightScale = 0.75f * ratio * padH;
-        
-        var padX = attackFrame ? widthScale * (0.5f - (AtlasConfig.Padding + w / 4) / texture.RawW()) : 0f;
-        var padY = heightScale * (0.5f - AtlasConfig.Padding / texture.RawH());
+        var widthScale = 0.1f * rawW;
+        var heightScale = 0.1f * rawH;
+
+        var padX = attackFrame ? widthScale * (0.5f - (AtlasConfig.Padding + w / 4) / rawW) : 0f;
+        var padY = heightScale * (0.5f - AtlasConfig.Padding / rawH);
 
         Scale = new Vector4(widthScale, heightScale, padX, -padY);
     }

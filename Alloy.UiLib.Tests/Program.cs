@@ -17,12 +17,17 @@ internal static class Program
     public static int Main()
     {
         Run("Projectile sprites counter-rotate with the camera", ProjectileRotationTests.Run);
+        Run("World sprites keep Flash texel density and aspect", SpriteScaleTests.Run);
+        Run("Camera focus stays pixel-snapped", CameraSnapTests.Run);
         Run("Character selection and news data", CharacterSelectionTests.Run);
         Run("Equipment tooltip parity", EquipmentTooltipTests.Run);
+        Run("Tooltip follow-mouse placement", TooltipPositionTests.Run);
         Run("Game-server packet wire format", PacketWireTests.Run);
+        Run("Space uses the slot-1 ability", AbilityTests.Run);
         Run("Detached drag start is safe", SpriteDragTests.Run);
         Run("Menu buttons share the ribbon center", MenuBarAlignmentTests.Run);
         Run("HP bars keep world size across zoom", HpBarScaleTests.Run);
+        Run("Sinking and HP bar match Flash", SinkParityTests.Run);
         Run("MapBackground embedded map decodes", MapBackgroundDecodeTests.Run);
         Run("MapBackground camera framing", MapBackgroundCameraTests.Run);
         Run("MapBackground wall entities", MapBackgroundEntitiesTests.Run);

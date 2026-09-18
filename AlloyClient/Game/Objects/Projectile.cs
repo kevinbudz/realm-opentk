@@ -31,40 +31,26 @@ public readonly struct EntityTexture(AtlasData uv, Vector4 scale) { // TODO: mov
     
     // TODO: redo this logic, tis a jank unreadable mess
 
+    // Flash parity (see RenderBase.SetTexture): every atlas texel covers
+    // 0.1 tiles = 5 screen px at zoom 1, preserving the source aspect.
     public static EntityTexture Create(AtlasData texture, bool attackFrame = false) {
-        var frameMult = attackFrame ? 2f : 1f;
-        var w = texture.RawW() - AtlasData.Padding * 2;
-        var h = texture.RawH() - AtlasData.Padding * 2;
-        
-        // this should be padding * 2 but the attack frame doesnt line up unless its 3 for some fucking reason
-        var padW = 1.0f + AtlasData.Padding * 3 / texture.RawW();
-        var padH = 1.0f + AtlasData.Padding * 3 / texture.RawH();
-        
-        var ratio = w / h / frameMult * MathF.Max(w / frameMult / 8, h / 8);
+        var rawW = texture.RawW();
+        var rawH = texture.RawH();
+        var w = rawW - AtlasData.Padding * 2;
 
-        var widthScale = 0.75f * ratio * frameMult * padW;
-        var heightScale = 0.75f * ratio * padH;
-        
-        var padX = attackFrame ? widthScale * (0.5f - (AtlasData.Padding + w / 4) / texture.RawW()) : 0f;
-        var padY = heightScale * (0.5f - AtlasData.Padding / texture.RawH());
+        var widthScale = 0.1f * rawW;
+        var heightScale = 0.1f * rawH;
+
+        var padX = attackFrame ? widthScale * (0.5f - (AtlasData.Padding + w / 4) / rawW) : 0f;
+        var padY = heightScale * (0.5f - AtlasData.Padding / rawH);
 
         var scale = new Vector4(widthScale, heightScale, padX, -padY);
         return new EntityTexture(texture, scale);
     }
-    
-    public static EntityTexture CreateCentered(AtlasData texture, bool attackFrame = false) {
-        var frameMult = attackFrame ? 2f : 1f;
-        var w = texture.RawW() - AtlasData.Padding * 2;
-        var h = texture.RawH() - AtlasData.Padding * 2;
-        
-        // this should be padding * 2 but the attack frame doesnt line up unless its 3 for some fucking reason
-        var padW = 1.0f + AtlasData.Padding * 3 / texture.RawW();
-        var padH = 1.0f + AtlasData.Padding * 3 / texture.RawH();
-        
-        var ratio = w / h / frameMult * MathF.Max(w / frameMult / 8, h / 8);
 
-        var widthScale = 0.75f * ratio * frameMult * padW;
-        var heightScale = 0.75f * ratio * padH;
+    public static EntityTexture CreateCentered(AtlasData texture, bool attackFrame = false) {
+        var widthScale = 0.1f * texture.RawW();
+        var heightScale = 0.1f * texture.RawH();
 
         var scale = new Vector4(widthScale, heightScale, 0, 0);
         return new EntityTexture(texture, scale);

@@ -37,9 +37,9 @@ public sealed class EquipmentToolTip : Tooltip
         AddTitle(itemData, player);
         AddDescription();
         PositionHeader();
-        _y = DescText.Y + DescText.Height + 8;
-        AddEffects(itemData);
-        AddRestrictions(itemData, player, ownerType, usableBy, specialKeyLabel);
+        _y = DescText.Y + DescText.Height + 4;
+        var effectsShown = AddEffects(itemData);
+        AddRestrictions(itemData, player, ownerType, usableBy, specialKeyLabel, effectsShown);
         DrawSprite();
     }
 
@@ -79,7 +79,7 @@ public sealed class EquipmentToolTip : Tooltip
         TierTag = new TierText(_itemDesc);
         TierTag.SetAnchor(UiAnchor.MiddleRight);
         // Right-anchored, so X is the right edge: inset from the tooltip edge.
-        TierTag.X = EquipmentTooltipLayout.TierRightX();
+        TierTag.X = MaxWidth - 24 + (TierTag.Width / 2);
         AddChild(TierTag);
     }
 
@@ -87,25 +87,26 @@ public sealed class EquipmentToolTip : Tooltip
     {
         DescText = new SimpleText(SimpleConfig(
             EquipmentTooltipBuilder.CollapseWhitespace(_itemDesc.Description), 14, FontType.Normal,
-            TooltipPalette.Body, 0x0, 0f, MaxWidth - 8, FlashTextFilters.Soft));
+            TooltipPalette.Body, 0x0, 0f, MaxWidth - 12, FlashTextFilters.Soft));
         AddChild(DescText);
     }
 
-    private void AddEffects(int itemData)
+    private bool AddEffects(int itemData)
     {
         var effects = EquipmentTooltipBuilder.BuildEffects(_itemDesc, itemData);
         if (effects.Count == 0)
         {
-            return;
+            return false;
         }
 
-        AddSeparator(_y);
-        _y += 12;
+        AddSeparator(_y - 2);
+        _y += 8;
         foreach (var effect in effects)
         {
             AddEffectRow(effect);
         }
-        _y += 10;
+        _y += 8;
+        return true;
     }
 
     private void AddEffectRow(TooltipEffect effect)
@@ -144,17 +145,17 @@ public sealed class EquipmentToolTip : Tooltip
     }
 
     private void AddRestrictions(int itemData, PlayerTooltipContext player, string ownerType,
-        IReadOnlyList<string> usableBy, string specialKeyLabel)
+        IReadOnlyList<string> usableBy, string specialKeyLabel, bool effectsShown)
     {
         var restrictions = EquipmentTooltipBuilder.BuildRestrictions(
             _itemDesc, itemData, player, ownerType, usableBy, specialKeyLabel);
-        if (restrictions.Count == 0)
+        if (restrictions.Count == 0 && !effectsShown)
         {
             return;
         }
 
-        AddSeparator(_y);
-        _y += 12;
+        AddSeparator(_y - 2);
+        _y += 8;
         foreach (var restriction in restrictions)
         {
             var text = new SimpleText(SimpleConfig(restriction.Text, 14,
@@ -168,7 +169,7 @@ public sealed class EquipmentToolTip : Tooltip
             AddChild(text);
             _y += text.Height;
         }
-        _y += 10;
+        _y += 8;
     }
 
     private void AddSeparator(int y)
@@ -177,7 +178,7 @@ public sealed class EquipmentToolTip : Tooltip
         {
             X = 8,
             Y = y,
-            Width = MaxWidth - 12,
+            Width = MaxWidth - 16,
             Height = 2,
             Color = 0x1C1C1C
         }));
@@ -189,8 +190,8 @@ public sealed class EquipmentToolTip : Tooltip
         TitleText.Y = EquipmentTooltipLayout.TitleMiddleY();
         if(TierTag != null)
         {
-            // Top-aligned with the title like Flash.
-            TierTag.Y = EquipmentTooltipLayout.TierMiddleY(TitleText.Y, TitleText.Height, TierTag.Height);
+            // Centered on the icon middle like the title (Flash alignUI).
+            TierTag.Y = EquipmentTooltipLayout.TierMiddleY(TitleText.Y);
         }
         DescText.X = 8;
         // Below the icon, but pushed further down when a wrapped title

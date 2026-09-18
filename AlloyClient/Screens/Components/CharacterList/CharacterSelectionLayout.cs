@@ -16,9 +16,10 @@ public static class CharacterSelectionLayout
     public const int SlotPrice = 2000;
     // Flash CharacterSelectionAndNewsScreen divider line at y=105.
     public const int DividerY = 105;
-    // Flash CurrentCharacterRect/CreateNewCharacterRect tagline icon/text y.
+    // Flash CurrentCharacterRect tagline icon/text y (makeTaglineIcon y=26,
+    // makeTaglineText y=24).
     public const int QuestIconY = 26;
-    public const int QuestTextY = 27;
+    public const int QuestTextY = 24;
     // News icons render the raw tile (plus 1px atlas padding) stretched to
     // the box. Flash redraws 8px tiles 4x and the 16px oryx tile 2x, so both
     // glyphs are 32px: 32 * 10 / 8 = 40 for 8px tiles, 32 * 18 / 16 = 36.
@@ -31,9 +32,9 @@ public static class CharacterSelectionLayout
     public const int CurrencyIconSize = 20;
     public const int CurrencyTextGap = 2;
     public const int CurrencyPairGap = 10;
-    // Currency display is right-aligned to the window edge. Previously at the
-    // edge (inset 0) and y=20; nudged left 2px and down 4px.
-    public const int CurrencyRightInset = 4;
+    // Currency display is right-aligned to the window edge. Flash pins it at
+    // the edge (inset 0) and y=20; nudged left 2px and down 4px.
+    public const int CurrencyRightInset = 2;
     public const int CurrencyTopY = 24;
 
     public static (int X, int Y) CurrencyPosition(int windowWidth, float scaleX, float scaleY) =>

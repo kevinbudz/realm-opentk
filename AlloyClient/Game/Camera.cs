@@ -22,7 +22,15 @@ public readonly struct Camera(Vector2 pos, Matrix4 matrix, Matrix4 billboard, Ve
         
         var matrix = Matrix4.CreateRotationX(MathHelper.Pi); // world
         matrix *= new Matrix4(new Vector4(1, 0, 0, 0), new Vector4(0, 1, 0, 0), new Vector4(s, -c, -1, 0), new Vector4(-pos.X, pos.Y, -12, 1)) * CreateScaleWithRotationZ(cameraAngle, zoom); // view
-        matrix *= Matrix4.CreateOrthographicOffCenter(-viewport.X + viewport.Z, viewport.X + viewport.Z, -viewport.Y, viewport.Y, -10000f, 10000f); // perspective
+        // Snap the focus to integer pixels: it lands at ((W-Z)/2, H/2), so an
+        // odd W-Z or H leaves a half-pixel phase and Nearest sampling then
+        // rasterizes the 1px shader outline asymmetrically (2px ring one side,
+        // 1px the other, mirroring with sprite flip). One ortho unit is half a
+        // screen px (the ortho spans twice the viewport), so nudging the window
+        // by one unit on odd parities re-centers it without visible shift.
+        var snapX = (viewport.X - viewport.Z) & 1;
+        var snapY = viewport.Y & 1;
+        matrix *= Matrix4.CreateOrthographicOffCenter(-viewport.X + viewport.Z + snapX, viewport.X + viewport.Z + snapX, -viewport.Y + snapY, viewport.Y + snapY, -10000f, 10000f); // perspective
         
         var billboard = Matrix4.Identity;
         billboard[0, 0] = c;

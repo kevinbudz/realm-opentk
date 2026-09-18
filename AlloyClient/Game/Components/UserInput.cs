@@ -37,6 +37,10 @@ public sealed class UserInput : Sprite {
     private int _moveDown;
     private int _moveUp;
 
+    private Camera _lastCamera;
+    private bool _hasCamera;
+    private bool _specialDown;
+
     public UserInput() {
         AddEventListener(Event.AddedToStage, AddedToStage);
         AddEventListener(Event.RemovedFromStage, RemovedFromStage);
@@ -98,6 +102,9 @@ public sealed class UserInput : Sprite {
     }
 
     public void Update(in GameTime gameTime, in Camera camera) {
+        _lastCamera = camera;
+        _hasCamera = true;
+
         if (IsInputDisabled() || !(_mouseDown || _autoFire)) {
             return;
         }
@@ -169,7 +176,8 @@ public sealed class UserInput : Sprite {
                 _autoFire = !_autoFire;
                 break;
             case true when Settings.Special.Equals(key):
-                //TODO: abilities
+                if (!_specialDown)
+                    _specialDown = TryUseAbility();
                 break;
             case true when Settings.Escape.Equals(key):
                 if (Map.Name == "Nexus" || Client.IsReconnecting)
@@ -185,6 +193,9 @@ public sealed class UserInput : Sprite {
                 break;
             case true when Settings.ResetCameraAngle.Equals(key):
                 Settings.CameraAngle.Set(0f);
+                break;
+            case true when Settings.ResetMScale.Equals(key):
+                Settings.CameraZoom.Set(1f);
                 break;
             case true when Settings.Options.Equals(key):
                 ClearMovement();
@@ -270,10 +281,28 @@ public sealed class UserInput : Sprite {
                 _moveRight = 0;
                 break;
             case true when Settings.Special.Equals(key):
-                //TODO: abilities
+                _specialDown = false;
                 break;
         }
-        
+
         SetPlayerMovement();
+    }
+
+    private bool TryUseAbility() {
+        var player = Map.LocalPlayer;
+        if (player == null)
+            return false;
+
+        Vector2 target;
+        if (_hasCamera && Stage != null)
+            target = _lastCamera.ScreenToWorld(_mousePosition, Stage.Dimensions).Xy;
+        else
+            target = player.Position;
+
+        var dX = target.X - player.Position.X;
+        var dY = target.Y - player.Position.Y;
+        var angle = MathF.Atan2(dY, dX);
+
+        return player.TryUseAbility(target, angle, Map.LastGameTime);
     }
 }

@@ -89,6 +89,11 @@ public partial class Sprite : DisplayContainer {
 
     public bool TooltipMode = false;
 
+    // Flash ToolTip forcePostionLeft/Right: pin the tooltip to one side of the cursor.
+    public bool ForceTooltipLeft;
+
+    public bool ForceTooltipRight;
+
     public bool EnableClipRect = false;
     public bool ClipChildren;
 
@@ -160,13 +165,14 @@ public partial class Sprite : DisplayContainer {
 
         if (TooltipMode) {
             var mousePosition = Stage.Mouse.GetMousePosition();
-            (_anchorX, _anchorY) =
-                (mousePosition.X < UiRender.Screen.X / 2 ? UiAnchor.LeftBottom : UiAnchor.RightBottom).GetOffset(ContentWidth,
-                    ContentHeight);
+            var (placedX, placedY) = TooltipPosition.Place(mousePosition.X, mousePosition.Y,
+                ContentWidth, ContentHeight, UiRender.Screen.X, UiRender.Screen.Y,
+                ForceTooltipLeft, ForceTooltipRight);
+            (_anchorX, _anchorY) = UiAnchor.LeftTop.GetOffset(ContentWidth, ContentHeight);
 
-            var localMouse = Parent?.GlobalToLocal(mousePosition) ?? mousePosition;
-            localX = localMouse.X;
-            localY = localMouse.Y;
+            var localPlaced = Parent?.GlobalToLocal(new Vector2(placedX, placedY)) ?? new Vector2(placedX, placedY);
+            localX = localPlaced.X;
+            localY = localPlaced.Y;
         } else if (_isDragging) {
             var mousePosition = Stage.Mouse.GetMousePosition();
             var localMouse = Parent?.GlobalToLocal(mousePosition) ?? mousePosition;

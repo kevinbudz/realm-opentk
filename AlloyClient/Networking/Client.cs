@@ -38,6 +38,12 @@ public static class Client {
     private static Socket _socket;
     private static TcpClient _tcp;
 
+    // Headless-test hook: when set, QueuePacket delivers to the sink instead
+    // of the socket buffer so tests can observe outgoing packets. The sink
+    // must snapshot fields synchronously; the packet is returned to its pool
+    // once the sink returns.
+    internal static Action<IOutgoingPacket>? OutgoingSink;
+
     static Client() {
         _sendState = new SocketSendState();
         _receiveState = new SocketReceiveState();
@@ -208,6 +214,12 @@ public static class Client {
         try {
             if (pkt.PacketId == PacketId.Unknown)
                 return;
+
+            var sink = OutgoingSink;
+            if (sink != null) {
+                sink(pkt);
+                return;
+            }
 
             lock (_sendState) {
                 _sendState.WritePacket(pkt, (byte) pkt.PacketId);

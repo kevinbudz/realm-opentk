@@ -1,3 +1,4 @@
+using System;
 using Alloy.UiLib.BuiltIn;
 using Alloy.UiLib.Core;
 using Alloy.UiLib.Extra;
@@ -136,7 +137,9 @@ public sealed class PotionInventory : Sprite {
 
         private void UsePotion() {
             var packet = UseItem.CreatePacket();
-            packet.Time = (int)Map.LastGameTime.TotalMs;
+            // Must share Move/PlayerShoot's Environment.TickCount epoch; the
+            // server rejects other epochs as "Invalid time useitem" + disconnect.
+            packet.Time = Environment.TickCount;
             packet.SlotObject.ObjectId = Player.ObjectId;
             packet.SlotObject.SlotId = _slotId;
             packet.ItemUsePos.X = Player.Position.X;

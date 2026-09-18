@@ -214,7 +214,9 @@ public sealed class ItemTile : Sprite {
 
             // added basic consume logic, this will be looked at another time i assume
             if (ItemDesc.ObjectType == ItemConstants.PotionType || ItemDesc.Consumable) {
-                int timeStuff = (int) Map.LastGameTime.TotalMs;
+                // Must share Move/PlayerShoot's Environment.TickCount epoch; the
+                // server rejects other epochs as "Invalid time useitem" + disconnect.
+                int timeStuff = Environment.TickCount;
 
                 useItem(
                     time: timeStuff,

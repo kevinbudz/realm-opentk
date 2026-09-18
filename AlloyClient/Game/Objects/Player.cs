@@ -1,6 +1,7 @@
 ﻿using System;
 using AlloyClient.Assets.Libraries;
 using AlloyClient.Game.Objects.Enums;
+using AlloyClient.Game.Objects.Util;
 using AlloyClient.Networking;
 using AlloyClient.Networking.Enums;
 using AlloyClient.Networking.Packets.Outgoing;
@@ -62,6 +63,8 @@ public class Player : Entity {
     
     public double AttackPeriod;
     public double AttackStart;
+
+    public double NextAbilityTime;
 
     public int AccountId;
 
@@ -287,6 +290,13 @@ public class Player : Entity {
                     HasBackPack = stat.Value != 0;
                     // add backpack signal
                     break;
+                case StatsType.SinkLevel:
+                    // The local player's sink is predicted in OnMove like the Flash
+                    // client (which skips this stat for itself); the server value
+                    // only drives remote players.
+                    if (this != Map.LocalPlayer)
+                        SinkLevel = stat.Value;
+                    break;
             }
         }
 
@@ -394,6 +404,89 @@ public class Player : Entity {
         shoot.NumShots = props.NumProjectiles;
 
         Client.QueuePacket(shoot);
+    }
+
+    public bool TryUseAbility(Vector2 target, float angle, GameTime gameTime) {
+        if (Equipment.Length <= AbilityHelper.AbilitySlotId)
+            return false;
+
+        var ability = Equipment[AbilityHelper.AbilitySlotId];
+        var data = ItemData.Length > AbilityHelper.AbilitySlotId ? ItemData[AbilityHelper.AbilitySlotId] : -1;
+        var now = gameTime.TotalMs;
+
+        if (!AbilityHelper.CanUse(ability, Mp, now, NextAbilityTime))
+            return false;
+
+        NextAbilityTime = AbilityHelper.NextUseTime(ability, data, now);
+
+        var use = UseItem.CreatePacket();
+        // The server's per-player time gate compares every packet's time
+        // against one baseline, so UseItem must share Move/PlayerShoot's
+        // Environment.TickCount epoch. Game-time TotalMs is a different
+        // epoch and gets rejected as "Invalid time useitem" + disconnect.
+        use.Time = Environment.TickCount;
+        use.SlotObject.ObjectId = ObjectId;
+        use.SlotObject.SlotId = AbilityHelper.AbilitySlotId;
+        use.ItemUsePos.X = target.X;
+        use.ItemUsePos.Y = target.Y;
+        use.UseType = (byte)UseType.START_USE;
+        Client.QueuePacket(use);
+
+        if (AbilityHelper.HasShootActivate(ability))
+            ShootAbility(angle, gameTime);
+
+        return true;
+    }
+
+    private void ShootAbility(float attackAngle, GameTime gameTime) {
+        if (HasConditionEffect(ConditionEffect.Stunned) || HasConditionEffect(ConditionEffect.Paused))
+            return;
+
+        if (Equipment.Length <= AbilityHelper.AbilitySlotId)
+            return;
+
+        var item = Equipment[AbilityHelper.AbilitySlotId];
+        if (item == null)
+            return;
+
+        if (!ObjectLibrary.TypeToObjectProps.TryGetValue(item.ObjectType, out var props))
+            return;
+        if (!props.Projectiles.TryGetValue(0, out var projProps))
+            return;
+
+        var projType = ObjectLibrary.IdToObjectType[projProps.ObjectId];
+        var objProps = ObjectLibrary.TypeToObjectProps[projType];
+
+        var shoot = PlayerShoot.CreatePacket();
+        shoot.Time = Environment.TickCount;
+        shoot.StartingPos = new Position { X = Position.X, Y = Position.Y };
+        shoot.Angle = attackAngle;
+        shoot.Ability = true;
+        shoot.NumShots = props.NumProjectiles;
+
+        Client.QueuePacket(shoot);
+
+        // Bullet ids must stay in lockstep with the server even when the
+        // local visuals below are skipped.
+        var baseId = Map.NextProjectileId;
+        Map.NextProjectileId = baseId - props.NumProjectiles;
+
+        // Local visuals need baked textures, which headless tests never load;
+        // the queued ability shoot above is the authoritative result.
+        if (!ObjectLibrary.TypeToTextureData.ContainsKey(projType))
+            return;
+
+        for (var i = 0; i < props.NumProjectiles; i++) {
+            var arc = MathHelper.DegreesToRadians(props.ArcGap) * (props.NumProjectiles - 1);
+            var startAngle = attackAngle - arc / 2;
+            var angle = startAngle + MathHelper.DegreesToRadians(props.ArcGap) * i;
+
+            var bId = baseId - i;
+            var proj = ObjectPools.Projectiles.Pop();
+            var dmg = Random.Shared.NextRange(projProps.MinDamage, projProps.MaxDamage);
+            proj.Reset(bId, dmg, angle, this, objProps, projProps, null, Position);
+            Map.AddProjectile(proj);
+        }
     }
 
     private Vector2 ModifyMove(float x, float y) {

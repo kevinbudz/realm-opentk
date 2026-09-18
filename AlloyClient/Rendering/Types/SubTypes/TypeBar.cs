@@ -12,12 +12,17 @@ public class TypeBar : SubRenderBase {
     // scale with the camera zoom like every other world quad (sprites,
     // names, effects) instead of compensating for it, so they keep a stable
     // size relative to the entities they belong to.
-    public const float FullWidth = 0.68f;
+    // Flash 1:1 at zoom 1 (50px/tile): 40x5 fill (w=20,h=5), 42.4x7.4
+    // background (1.2px pad).
+    public const float FullWidth = 0.8f;
     public const float HalfWidth = FullWidth / 2f;
-    public const float BarHeight = 0.08f;
-    public const float BackgroundWidth = 0.72f;
-    public const float BackgroundHeight = 0.12f;
-    public const float BaseYOffset = 0.1f;
+    public const float BarHeight = 0.1f;
+    public const float BackgroundWidth = 0.848f;
+    public const float BackgroundHeight = 0.148f;
+    // Flash parity: DEFAULT_HP_BAR_Y_OFFSET puts the fill top 5px below the
+    // feet and the 1.2px background pad centers the bar at 7.5px = 0.15 tiles
+    // at zoom 1 (yOffset addresses the bar center).
+    public const float BaseYOffset = 0.15f;
     public const float RowSpacing = 0.12f * 2;
 
     public override float Height => RowSpacing;
