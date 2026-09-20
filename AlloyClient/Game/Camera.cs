@@ -15,7 +15,40 @@ public readonly struct Camera(Vector2 pos, Matrix4 matrix, Matrix4 billboard, Ve
     public readonly Matrix4 BillboardMatrix = billboard;
     public readonly Vector2 VisibleTileRadius = visibleTiles;
     
+    // Flash parity (map/Camera.startJitter, ShowEffect Jitter e.g. quakes):
+    // a shake that ramps to 0.5 tiles over 10s and offsets the focus by a
+    // random amount each frame. A new map resets it, like Flash's per-map
+    // camera instance being recreated.
+    private static bool _jittering;
+    private static double _jitter;
+    private static int _lastJitterTick;
+    private const double MaxJitter = 0.5;
+    private const double JitterBuildupMs = 10000.0;
+
+    public static void StartJitter() {
+        _jittering = true;
+        _jitter = 0;
+        _lastJitterTick = Environment.TickCount;
+    }
+
+    public static void ResetJitter() {
+        _jittering = false;
+        _jitter = 0;
+    }
+
     public static Camera Update(Vector2 pos, Vector3i viewport, float cameraAngle, float cameraZoom) {
+        if (_jittering && _jitter < MaxJitter) {
+            var now = Environment.TickCount;
+            var dt = Math.Max(0, now - _lastJitterTick);
+            _lastJitterTick = now;
+            _jitter = Math.Min(MaxJitter, _jitter + dt * MaxJitter / JitterBuildupMs);
+        }
+
+        if (_jitter > 0) {
+            var j = (float)_jitter;
+            pos += new Vector2(Random.Shared.NextSingle() * 2 * j - j, Random.Shared.NextSingle() * 2 * j - j);
+        }
+
         var s = MathF.Sin(-cameraAngle);
         var c = MathF.Cos(-cameraAngle);
         var zoom = BaseCameraZoom * cameraZoom;

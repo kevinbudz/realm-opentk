@@ -20,10 +20,13 @@ internal static class Program
         Run("World sprites keep Flash texel density and aspect", SpriteScaleTests.Run);
         Run("Camera focus stays pixel-snapped", CameraSnapTests.Run);
         Run("Character selection and news data", CharacterSelectionTests.Run);
+        Run("Server condition mask translation", ConditionMaskTests.Run);
+        Run("Condition icons match Flash", ConditionIconTests.Run);
         Run("Equipment tooltip parity", EquipmentTooltipTests.Run);
         Run("Tooltip follow-mouse placement", TooltipPositionTests.Run);
         Run("Game-server packet wire format", PacketWireTests.Run);
         Run("Space uses the slot-1 ability", AbilityTests.Run);
+        Run("ShowEffect ability visuals match Flash", ShowEffectTests.Run);
         Run("Detached drag start is safe", SpriteDragTests.Run);
         Run("Menu buttons share the ribbon center", MenuBarAlignmentTests.Run);
         Run("HP bars keep world size across zoom", HpBarScaleTests.Run);

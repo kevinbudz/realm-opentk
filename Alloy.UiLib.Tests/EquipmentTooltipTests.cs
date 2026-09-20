@@ -40,6 +40,7 @@ internal static class EquipmentTooltipTests {
         ItemDataBonuses();
         CooldownDefault();
         ExtraTooltipFirst();
+        ShurikenAbilityTooltip();
         Restrictions();
         Requirements();
         StatHelpers();
@@ -133,6 +134,21 @@ internal static class EquipmentTooltipTests {
         Equal("Snowman accessory", effects[0].Name);
         Equal("1 of 8", effects[0].Value[0].Text);
         Equal("Shots", effects[1].Name);
+    }
+
+    private static void ShurikenAbilityTooltip() {
+        // The game data names the ninja activate ShurikenAbility (the server
+        // honors the legacy Shuriken alias too): the tooltip must show the
+        // shot count and the release line for it, not go blank. The old
+        // seeking-nova wording (amount-based shots, seek, daze) described
+        // the replaced server ability and must not render.
+        var item = new ItemDesc(12, XElement.Parse(
+            """<Object type="12" id="Star"><Class>Equipment</Class><Item/><SlotType>25</SlotType><Usable/><Activate amount="3">ShurikenAbility</Activate></Object>"""));
+        var effects = EquipmentTooltipBuilder.BuildEffects(item, -1);
+        var names = string.Join("|", effects.Select(e => e.Name));
+        Equal("Shots|", names);
+        Equal("1", effects[0].Value[0].Text);
+        Equal("Thrown on release (0 MP)", effects[1].Value[0].Text);
     }
 
     private static void Restrictions() {

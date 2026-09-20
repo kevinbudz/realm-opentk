@@ -300,9 +300,11 @@ public static class EquipmentTooltipBuilder {
                     effects.Add(new TooltipEffect("Shots", [Value("20")]));
                     break;
                 case "Shuriken":
-                    effects.Add(new TooltipEffect("Shots", [Value(activate.Amount.ToString())]));
-                    effects.Add(new TooltipEffect("", [Value("Stars seek nearby enemies")]));
-                    effects.Add(new TooltipEffect("", [Value("Dazes nearby enemies")]));
+                case "ShurikenAbility":
+                    //Channeled ninja throw: hold to charge, the star leaves
+                    //on release. No seeking nova, no daze.
+                    effects.Add(new TooltipEffect("Shots", [Value(item.NumProjectiles.ToString())]));
+                    effects.Add(new TooltipEffect("", [Value($"Thrown on release ({item.MpEndCost} MP)")]));
                     break;
                 case "IncrementStat": {
                     var stat = StatsUtil.StatToBoostIndex(activate.Stats);

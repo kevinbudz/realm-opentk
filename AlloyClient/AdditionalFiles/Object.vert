@@ -98,7 +98,7 @@ void main() {
 
     InstanceData data = instanceBuffer.data[instanceId];
 
-    if (RenderPass == OutlineGlowPass && data.Extra.Type != TypeGameObject){
+    if (RenderPass == OutlineGlowPass && data.Extra.Type != TypeGameObject && data.Extra.Type != TypeEffect){
         gl_Position = vec4(2, 0, 0, 0); // Discard vertex
         return;
     }

@@ -535,10 +535,16 @@ public static class Map {
         Projectiles.Clear();
         VisibleProjectiles.Clear();
 
+        // Effects belong to their world: a portal must not carry the old
+        // map's emitters (or their entity references) into the new one.
+        ParticleGenerators.Clear();
+        ParticleGenCount = 0;
+
         LocalPlayerId = 0;
         LocalPlayer = null;
         NextProjectileId = 0;
         NextFakeBulletId = 0;
+        Camera.ResetJitter();
 
         LastTickId = 0;
         

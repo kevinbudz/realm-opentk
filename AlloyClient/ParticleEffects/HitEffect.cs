@@ -43,21 +43,20 @@ public class HitEffect : ParticleEffect
             _count++;
         }
         
+        _lifeTime -= dt;
+        if (_lifeTime <= 0) {
+            return false;
+        }
+
         for (var i = _count - 1; i >= 0; i--)
         {
             ref var data = ref _data[i];
             ref var particle = ref _particles[i];
-            
+
             particle.Position.X += data.X * (float)(dt * 0.004);
             particle.Position.Y += data.Y * (float)(dt * 0.004);
-            
+
             particle.Color = _color;
-            
-            _lifeTime -= dt;
-            
-            if (_lifeTime <= 0) {
-                return false;
-            }
         }
         
         Map.AddParticles(_particles, _count);

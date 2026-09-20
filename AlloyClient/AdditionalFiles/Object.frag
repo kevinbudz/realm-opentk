@@ -62,10 +62,28 @@ vec4 GetGameObject() {
 
     // uvMax precomputed once, reused in map() and as loop bounds
     vec2 uvMax = vsInput.UV.xy + vsInput.UV.zw;
-    vec2 uv = map(vsInput.BaseUV, vsInput.UV.xy, uvMax);
+    //Condition icons ride a 16px Flash-canvas quad while the atlas tile is
+    //the bare 10px glyph+pad. Center the tile 1:1 inside (inner 10/16) so the
+    //glyph stays a pixel-identical 8px and the outer 3px stays transparent
+    //for the outline + faint glow. Sampling outside the tile would bleed a
+    //packed neighbor, so force transparent there; the outline/glow search
+    //below stays bounded to this tile and still finds the glyph.
+    vec2 baseForUV = vsInput.BaseUV;
+    bool isEffect = (vsInput.Extra.Type == TypeEffect);
+    if (isEffect) {
+        baseForUV = (vsInput.BaseUV - 0.1875) / 0.625;
+    }
+    vec2 uv = map(baseForUV, vsInput.UV.xy, uvMax);
     vec2 dx = dFdx(uv);
     vec2 dy = dFdy(uv);
-    vec4 color = textureGrad(GameTexture, uv, dx, dy);
+    //Icons sample Nearest like everything else. The centered tile is 1:1
+    //(10 texels over the inner 10px), so crisp texels beat a linear blur.
+    vec4 color;
+    if (isEffect && (baseForUV.x < 0.0 || baseForUV.x > 1.0 || baseForUV.y < 0.0 || baseForUV.y > 1.0)) {
+        color = vec4(0.0);
+    } else {
+        color = textureGrad(GameTexture, uv, dx, dy);
+    }
     color.rgb -= vsInput.Extra.Shade * 0.241 * clamp(vsInput.BaseUV.y - 0.4, 0.0, 0.4);
     if (RenderPass == OpaquePass){
         if (color.a < 1.0 || vsInput.Extra.Alpha < 1.0){
@@ -107,7 +125,9 @@ vec4 GetGameObject() {
 
     int stepSize = int(ceil(Zoom * 2));
     for (int i = 1; i <= glowSizeInt && !foundOutline; i += stepSize) {
-        if (i > outlineSizeInt && belowTexel) {
+        //Icons float above the sprite with no feet to protect; keep their
+        //faint halo all around like Flash's 6px glow.
+        if (i > outlineSizeInt && belowTexel && vsInput.Extra.Type != TypeEffect) {
             discard;
         }
 

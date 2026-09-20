@@ -1,6 +1,7 @@
 using System.Xml.Linq;
 using Alloy.Engine;
 using AlloyClient;
+using AlloyClient.Assets;
 using AlloyClient.Assets.Libraries;
 using AlloyClient.Assets.XmlStructs;
 using AlloyClient.Game;
@@ -92,6 +93,9 @@ internal static class AbilityTests {
         LowMpSendsNothingThroughPublicInput();
         ShootAbilitySendsAbilityShoot();
         UseItemTimeSharesMoveEpoch();
+        NonShootAbilitiesSendUseItemOnly();
+        ShurikenAmountParses();
+        ShieldAbilitySpawnsLocalProjectiles();
     }
 
     private static void RejectsMissingOrNonUsable() {
@@ -297,12 +301,156 @@ internal static class AbilityTests {
             throw new Exception($"UseItem time {packetTime} is not in the Move/PlayerShoot epoch.");
     }
 
-    private static Player NewPlayer(ushort type, string xml, int mp, int objectId) {
+    // Server-authoritative abilities (seeking stars, grenades, traps) never
+    // shoot locally like Flash: UseItem only, the server answers with
+    // ServerPlayerShoot/ShowEffect and the client must not invent shots.
+    private static void NonShootAbilitiesSendUseItemOnly() {
+        var star = new ItemDesc(2005, XElement.Parse(
+            """<Object type="2005" id="Test Star"><Class>Equipment</Class><Item/><SlotType>25</SlotType><Usable/><MpCost>0</MpCost><Activate amount="3">ShurikenAbility</Activate></Object>"""));
+        Equal(false, AbilityHelper.HasShootActivate(star));
+
+        var poison = new ItemDesc(2006, XElement.Parse(
+            """<Object type="2006" id="Test Poison"><Class>Equipment</Class><Item/><SlotType>18</SlotType><Usable/><MpCost>30</MpCost><Activate radius="2.5" totalDamage="150" duration="5">PoisonGrenade</Activate></Object>"""));
+        Equal(false, AbilityHelper.HasShootActivate(poison));
+
+        foreach (var item in new[] { star, poison }) {
+            var player = NewPlayerWithItem(item, mp: 100, objectId: 11);
+            player.Position = new Vector2(10, 20);
+            var uses = 0;
+            var shoots = 0;
+            Client.OutgoingSink = pkt => {
+                if (pkt is UseItem) uses++;
+                else if (pkt is PlayerShoot) shoots++;
+            };
+            try {
+                Equal(true, player.TryUseAbility(new Vector2(13, 22), 0.5f, new GameTime(3000, 16)));
+                Equal(1, uses);
+                Equal(0, shoots);
+            } finally {
+                Client.OutgoingSink = null;
+            }
+        }
+    }
+
+    // The star data contract the server and tooltip rely on: the amount
+    // attribute carries the seeking-star count (regression for stars that
+    // shipped without it and silently threw nothing).
+    private static void ShurikenAmountParses() {
+        var star = new ItemDesc(2005, XElement.Parse(
+            """<Object type="2005" id="Test Star"><Class>Equipment</Class><Item/><SlotType>25</SlotType><Usable/><Activate amount="3">ShurikenAbility</Activate></Object>"""));
+        Equal(1, star.ActivateEffects.Length);
+        Equal("ShurikenAbility", star.ActivateEffects[0].Effect);
+        Equal(3, star.ActivateEffects[0].Amount);
+    }
+
+    // Shield-shaped Shoot ability through the public input: UseItem plus an
+    // ability PlayerShoot fanning out, and the matching local projectiles.
+    // Stub textures stand in for baked atlas data, which headless tests
+    // never load (see Player.ShootAbility).
+    private static void ShieldAbilitySpawnsLocalProjectiles() {
+        const string shieldXml = """
+            <Object type="3003" id="Test Shield">
+              <Class>Equipment</Class>
+              <Item/>
+              <SlotType>5</SlotType>
+              <Usable/>
+              <MpCost>80</MpCost>
+              <Activate>Shoot</Activate>
+              <NumProjectiles>2</NumProjectiles>
+            </Object>
+            """;
+        const string shieldPropsXml = """
+            <Object type="3003" id="Test Shield">
+              <Class>Equipment</Class>
+              <Projectile id="0">
+                <ObjectId>TestShieldBullet</ObjectId>
+                <LifetimeMS>200</LifetimeMS>
+                <Speed>160</Speed>
+                <Damage>10</Damage>
+              </Projectile>
+              <NumProjectiles>2</NumProjectiles>
+              <ArcGap>11.25</ArcGap>
+            </Object>
+            """;
+        const string bulletPropsXml = """
+            <Object type="3004" id="TestShieldBullet">
+              <Class>Projectile</Class>
+            </Object>
+            """;
+
+        var savedAbilityProps = ObjectLibrary.TypeToObjectProps.TryGetValue(3003, out var prevAbilityProps);
+        var savedBulletProps = ObjectLibrary.TypeToObjectProps.TryGetValue(3004, out var prevBulletProps);
+        var savedBulletType = ObjectLibrary.IdToObjectType.TryGetValue("TestShieldBullet", out var prevBulletType);
+        var savedAbilityTex = ObjectLibrary.TypeToTextureData.TryGetValue(3003, out var prevAbilityTex);
+        var savedBulletTex = ObjectLibrary.TypeToTextureData.TryGetValue(3004, out var prevBulletTex);
+        var savedNextId = Map.NextProjectileId;
+
+        var player = NewPlayer(3003, shieldXml, mp: 100, objectId: 12);
+        player.Position = new Vector2(10, 20);
+        var uses = 0;
+        var shoots = new List<(bool Ability, int NumShots)>();
+
+        ObjectLibrary.TypeToObjectProps[3003] = new ObjectProperties(XElement.Parse(shieldPropsXml));
+        ObjectLibrary.TypeToObjectProps[3004] = new ObjectProperties(XElement.Parse(bulletPropsXml));
+        ObjectLibrary.IdToObjectType["TestShieldBullet"] = 3004;
+        ObjectLibrary.TypeToTextureData[3003] = new TextureData(new XElement("Object"));
+        ObjectLibrary.TypeToTextureData[3004] = new TextureData(new XElement("Object"));
+        Map.NextProjectileId = 0;
+
+        Client.OutgoingSink = pkt => {
+            if (pkt is UseItem) uses++;
+            else if (pkt is PlayerShoot s) shoots.Add((s.Ability, s.NumShots));
+        };
+        try {
+            Equal(true, player.TryUseAbility(new Vector2(14, 21), 1.0f, new GameTime(4000, 16)));
+            Equal(1, uses);
+            Equal(1, shoots.Count);
+            Equal(true, shoots[0].Ability);
+            Equal(2, shoots[0].NumShots);
+            Equal(2, ProjectileCount());
+            Equal(-2, Map.NextProjectileId);
+        } finally {
+            Client.OutgoingSink = null;
+            if (savedAbilityProps)
+                ObjectLibrary.TypeToObjectProps[3003] = prevAbilityProps!;
+            else
+                ObjectLibrary.TypeToObjectProps.Remove(3003);
+            if (savedBulletProps)
+                ObjectLibrary.TypeToObjectProps[3004] = prevBulletProps!;
+            else
+                ObjectLibrary.TypeToObjectProps.Remove(3004);
+            if (savedBulletType)
+                ObjectLibrary.IdToObjectType["TestShieldBullet"] = prevBulletType;
+            else
+                ObjectLibrary.IdToObjectType.Remove("TestShieldBullet");
+            if (savedAbilityTex)
+                ObjectLibrary.TypeToTextureData[3003] = prevAbilityTex!;
+            else
+                ObjectLibrary.TypeToTextureData.Remove(3003);
+            if (savedBulletTex)
+                ObjectLibrary.TypeToTextureData[3004] = prevBulletTex!;
+            else
+                ObjectLibrary.TypeToTextureData.Remove(3004);
+            Map.Reset();
+            Map.NextProjectileId = savedNextId;
+        }
+    }
+
+    private static int ProjectileCount() {
+        var field = typeof(Map).GetField("Projectiles",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        return ((System.Collections.ICollection)field.GetValue(null)!).Count;
+    }
+
+    private static Player NewPlayer(ushort type, string xml, int mp, int objectId) =>
+        NewPlayerWithItem(new ItemDesc(type, XElement.Parse(xml)), mp, objectId);
+
+    private static Player NewPlayerWithItem(ItemDesc item, int mp, int objectId) {
         var player = new Player {
             Mp = mp,
             ObjectId = objectId
         };
-        player.Equipment[AbilityHelper.AbilitySlotId] = new ItemDesc(type, XElement.Parse(xml));
+        player.Equipment[AbilityHelper.AbilitySlotId] = item;
         return player;
     }
 

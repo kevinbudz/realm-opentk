@@ -18,7 +18,7 @@ public unsafe struct ConditionEffectBucket {
     public readonly void GetEffectsData(Span<Vector4> span, int index) {
         var idx = 0;
         for (var i = 0; i < ConditionEffects.MaxEffectBuckets; i++) {
-            var bits = (uint) (_buckets[i] & ~ConditionEffects.IconlessEffects[i]);
+            var bits = (uint) (_buckets[i] & ConditionEffects.IconicMasks[i]);
 
             if (bits == 0) {
                 continue;
@@ -47,7 +47,7 @@ public unsafe struct ConditionEffectBucket {
         var count = 0;
 
         for (var i = 0; i < ConditionEffects.MaxEffectBuckets; i++) {
-            count += System.Numerics.BitOperations.PopCount((uint)(_buckets[i] & ~ConditionEffects.IconlessEffects[i]));
+            count += ConditionEffects.CountIcons(i, _buckets[i]);
         }
 
         TotalIcons =  count;
@@ -66,7 +66,9 @@ public static class ConditionEffects {
 
     private readonly static ConditionEffectData[] EffectTable = [
         new("Nothing", ConditionEffect.None, null),
-        new("Dead", ConditionEffect.Dead, [0]),
+        //Flash has no Dead icon; sharing Speedy's tile would show a speedy
+        //arrow on corpses if the bit is ever set.
+        new("Dead", ConditionEffect.Dead, null),
         new("Quiet", ConditionEffect.Quiet, [32]),
         new("Weak", ConditionEffect.Weak, [34, 35, 36, 37]),
         new("Slowed", ConditionEffect.Slowed, [1]),
@@ -96,22 +98,65 @@ public static class ConditionEffects {
         new("Ninja Speedy", ConditionEffect.NinjaSpeedy, [0])
     ];
 
-    internal readonly static BucketType[] IconlessEffects = new BucketType[MaxEffectBuckets];
+    //Realm-server (like the Flash ConditionEffect.as) numbers conditions
+    //Nothing=0, Quiet=1, ... Speedy=14, Hexed=25 and sends bit (index-1) in
+    //the Condition stat. This client inserts Dead=1, so every shared effect
+    //sits one slot higher (Quiet=2, ... Speedy=15) and later entries diverge
+    //further. Server bits therefore cannot land in the buckets directly:
+    //each bit is mapped to this client's enum value by effect. Server bits
+    //past index 25 are never sent and are dropped.
+    private readonly static ConditionEffect[] ServerBitToEffect = [
+        ConditionEffect.Quiet, ConditionEffect.Weak, ConditionEffect.Slowed,
+        ConditionEffect.Sick, ConditionEffect.Dazed, ConditionEffect.Stunned,
+        ConditionEffect.Blind, ConditionEffect.Hallucinating, ConditionEffect.Drunk,
+        ConditionEffect.Confused, ConditionEffect.StunImmune, ConditionEffect.Invisible,
+        ConditionEffect.Paralyzed, ConditionEffect.Speedy, ConditionEffect.Bleeding,
+        ConditionEffect.Healing, ConditionEffect.Damaging, ConditionEffect.Berserk,
+        ConditionEffect.Stasis, ConditionEffect.StasisImmune, ConditionEffect.Invincible,
+        ConditionEffect.Invulnerable, ConditionEffect.Armored, ConditionEffect.ArmorBroken,
+        ConditionEffect.Hexed,
+    ];
+
+    public static BucketType TranslateServerMask(BucketType serverMask) {
+        var clientMask = (BucketType)0;
+        for (var b = 0; b < ServerBitToEffect.Length; b++) {
+            if ((serverMask & ((BucketType)1 << b)) != 0)
+                clientMask |= (BucketType)1 << (EffectType)ServerBitToEffect[b];
+        }
+        return clientMask;
+    }
+
+    //Bits that produce an icon quad, derived from EffectTable (no atlas
+    //needed). TotalIcons must agree exactly with the quads GetEffectsData
+    //writes: masking only the iconless bits still counts enum values that
+    //have no icon entry, leaving trailing zero-UV quads sampling the atlas
+    //origin.
+    internal readonly static BucketType[] IconicMasks = BuildIconicMasks();
+
+    private static BucketType[] BuildIconicMasks() {
+        var masks = new BucketType[MaxEffectBuckets];
+        foreach (var effect in EffectTable) {
+            if (effect.IconLookup != null)
+                masks[(EffectType) effect.Index / MaxBucketSize] |= (BucketType) (1 << ((EffectType) effect.Index % MaxBucketSize));
+        }
+        return masks;
+    }
+
+    //Icon quads a bucket value would draw. Pure: safe to call without atlas init.
+    public static int CountIcons(int bucketId, BucketType bucketValue) =>
+        System.Numerics.BitOperations.PopCount((uint) (bucketValue & IconicMasks[bucketId]));
 
     public readonly static Dictionary<ConditionEffect, Vector4[]> EffectIcons = [];
 
     private readonly static Dictionary<string, ConditionEffect> NameToEffect = [];
 
     public static void Init() {
-        Array.Clear(IconlessEffects);
         EffectIcons.Clear();
         NameToEffect.Clear();
 
         foreach (var effect in EffectTable) {
             if (effect.IconLookup != null) {
                 EffectIcons[effect.Index] = effect.IconLookup.Select(i => Main.Atlas.GetAtlasData("lofiInterface2", i).ToVector4()).ToArray();
-            } else {
-                IconlessEffects[(EffectType) effect.Index / MaxBucketSize] |= (1 << ((EffectType) effect.Index % MaxBucketSize));
             }
 
             NameToEffect[effect.Name] = effect.Index;

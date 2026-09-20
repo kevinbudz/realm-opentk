@@ -346,8 +346,9 @@ public class Player : Entity {
         
         var attFreq = MinAttackFreq + Dexterity / 75f * (MaxAttackFreq - MinAttackFreq);
 
+        //Flash Player.attackFrequency and the server GetAttackFrequency both use 1.5x.
         if (HasConditionEffect(ConditionEffect.Berserk))
-            attFreq *= 1.25f;
+            attFreq *= 1.5f;
         
         return attFreq;
     }
@@ -492,10 +493,12 @@ public class Player : Entity {
     private Vector2 ModifyMove(float x, float y) {
         var result = new Vector2();
 
-        // if (para and statis dont move) {
-        //     result.X = X;
-        //     result.Y = Y;
-        // }
+        //Flash modifyMove and the server both freeze local movement while paralyzed.
+        if (HasConditionEffect(ConditionEffect.Paralyzed)) {
+            result.X = X;
+            result.Y = Y;
+            return result;
+        }
 
         var dX = x - Position.X;
         var dY = y - Position.Y;
@@ -664,8 +667,7 @@ public class Player : Entity {
         RelativeMoveVector.X = relMoveVecX;
         RelativeMoveVector.Y = relMoveVecY;
 
-        if (false) {
-            // Confused
+        if (HasConditionEffect(ConditionEffect.Confused)) {
             var temp = RelativeMoveVector.X;
             RelativeMoveVector.X = -RelativeMoveVector.Y;
             RelativeMoveVector.Y = -temp;
@@ -674,22 +676,15 @@ public class Player : Entity {
     }
 
     private float GetMoveSpeed() {
-        if (false) {
-            // Slowed
+        if (HasConditionEffect(ConditionEffect.Slowed)) {
             return MinMoveSpeed * MovementMultiplier;
         }
 
         var speed = Focused ? FocusedSpeed : Speed;
         var moveSpeed = MinMoveSpeed + speed / 75 * (MaxMoveSpeed - MinMoveSpeed);
 
-        if (false || false) {
-            // Speedy or NinjaSpeedy
+        if (HasConditionEffect(ConditionEffect.Speedy) || HasConditionEffect(ConditionEffect.NinjaSpeedy)) {
             moveSpeed *= 1.5f;
-        }
-
-        if (false) {
-            // Bunny Speedy
-            moveSpeed *= 1.2f;
         }
 
         return moveSpeed * MovementMultiplier;

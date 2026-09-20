@@ -27,7 +27,7 @@ public static class FlashTextFilters {
     /// <summary>Item-tile tier tag: Flash's <c>GlowFilter(0, 1, 2, 2, 10, 1)</c>
     /// from <c>ItemTile.setTierTag</c>, i.e. a zero-distance black glow.</summary>
     public static DropShadowFilter TierTag { get; } = new(distance: 0, angle: 0, color: 0,
-        alpha: 1, blurX: 1, blurY: 1, strength: 4, quality: 1);
+        alpha: 1, blurX: 1, blurY: 1, strength: 6, quality: 1);
 }
 
 /// <summary>

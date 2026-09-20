@@ -389,8 +389,10 @@ public class Entity {
                     }
                     InventoryUpdate.Dispatch(index);
                     break;
-                case StatsType.Condition1: // TODO: implement same thing server side
-                    EffectBuckets.SetBucket(0, stat.Value);
+                case StatsType.Condition1:
+                    //Server bits follow its Nothing=0, Quiet=1, ... numbering;
+                    //translate to this client's Dead-shifted enum values.
+                    EffectBuckets.SetBucket(0, ConditionEffects.TranslateServerMask(stat.Value));
                     RenderBaseType.Extra.Alpha = HasConditionEffect(ConditionEffect.Invisible) ? 0.5f : 1;
                     break;
                 case StatsType.Name:
