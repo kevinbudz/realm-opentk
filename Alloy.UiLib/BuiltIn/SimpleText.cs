@@ -46,10 +46,14 @@ public sealed class SimpleText : Sprite {
     private readonly int _maxWidth;
     private readonly BitmapFont _font;
 
-    public SimpleText(TextConfig config) {
+    public SimpleText(TextConfig config) : this(config, UiRender.GetFont(config.FontType)) {
+    }
+
+    // Test seam: layout without engine font init (unavailable headless).
+    internal SimpleText(TextConfig config, BitmapFont font) {
         Text = config.Text;
         _fontScale = config.FontSize;
-        _font = UiRender.GetFont(config.FontType);
+        _font = font;
         _maxWidth = config.MaxWidth;
         X = config.X;
         Y = config.Y;
@@ -146,8 +150,11 @@ public sealed class SimpleText : Sprite {
             }
 
             // Todo: add param for word wrap
-            // Max width hit, start new line
-            if (_maxWidth > -1 && zero.X >= _maxWidth && i < len - 1) {
+            // Max width hit, start new line. The final character counts too
+            // when an earlier word can move down; otherwise text that only
+            // overflows on its last character never wraps and renders past
+            // its bounds (e.g. a vendor name just wider than the panel).
+            if (_maxWidth > -1 && zero.X >= _maxWidth && (i < len - 1 || (lastSpaceIndex >= 0 && lastSpaceIndex < i))) {
                 // Prevent word being cut by the new line if there was
                 if (lastSpaceIndex >= 0) {
                     idx = lastSpaceGlyphCount;

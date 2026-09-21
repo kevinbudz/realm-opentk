@@ -4,6 +4,7 @@ using AlloyClient.Game.Objects;
 using AlloyClient.Rendering.VertexData;
 using Alloy.UiLib;
 using Alloy.UiLib.Core;
+using Alloy.UiLib.Data;
 using OpenTK.Mathematics;
 
 namespace AlloyClient.Rendering.Types.SubTypes;
@@ -14,6 +15,20 @@ public class TypeName : SubRenderBase {
     public override float Height {
         get => _height * 1.75f;
     }
+
+    // Flash parity (GameObject.generateNameText): SimpleText(16, white) with
+    // bold set, no letter-spacing. Both clients map one tile to 50px
+    // (Flash Camera appendScale(50); Alloy BaseCameraZoom at zoom 1), so a
+    // 16px Flash em is 16/50 tiles in the world.
+    internal const float WorldTextSize = 16f / 50f;
+    internal static readonly FontType NameFont = FontType.Bold;
+
+    // Flash parity: GameObject floating names render white; Player overrides
+    // recolor to NAME_COLOUR gold (0xFCDF00). Kept out of SetTextures so a
+    // live rename (e.g. the portal "Realm (count)" Name stat) never resets a
+    // portal back to gold.
+    internal static Color DefaultColorFor(Entity entity) =>
+        entity is Player ? new Color(0xFC, 0xDF, 0, 1) : Color.White;
 
     public string Name;
 
@@ -30,51 +45,62 @@ public class TypeName : SubRenderBase {
 
         if (string.IsNullOrEmpty(Name))
             Name = "Default";
-        
+
+        Color = DefaultColorFor(entity);
         SetTextures();
         Extra = new ExtraData(RenderConfig.TypeText, RenderConfig.NoShade);
     }
 
     public void SetTextures() {
-        const float size = 0.5f * 0.5f;
-        
-        var font = UiRender.GetFont(FontType.Normal);
-        _glyphs = new GlyphData[Name.Length];
+        SetTextures(UiRender.GetFont(NameFont));
+    }
 
-        _height = font.Ascender * size;
-        var zero = new Vector2(0f, _height);
+    internal void SetTextures(BitmapFont font) {
+        var size = WorldTextSize;
+        _glyphs = Layout(Name, font, size, out _height, out _);
 
-        var len = Name.Length;
+        Rotation = new Vector4(0, 1, 1, -1);
+    }
+
+    // Mirrors UiLib SimpleText.FillData (advance + single kerning, no extra
+    // tracking) but emits world-space billboard quads centered on the string.
+    internal static GlyphData[] Layout(string name, BitmapFont font, float size, out float height, out float totalWidth) {
+        height = font.Ascender * size;
+        var zero = new Vector2(0f, height);
+
+        var len = name.Length;
+        var glyphs = new GlyphData[len];
         for (var i = 0; i < len; i++) {
-            var c = Name[i];
+            var c = name[i];
             if (!font.Glyphs.TryGetValue(c, out var glyph)) {
                 continue;
             }
 
             var uv = glyph.UV;
             var pos = glyph.Position;
-            var w = (pos.X1 - pos.X0) / 2.0f * size;
-            var h = (pos.Y0 - pos.Y1) / 2.0f * size;
+            var w = (pos.X1 - pos.X0) * size;
+            var h = (pos.Y0 - pos.Y1) * size;
+            var cx = zero.X + (pos.X0 + pos.X1) * 0.5f * size;
+            var cy = zero.Y - (pos.Y0 + pos.Y1) * 0.5f * size;
 
-            _glyphs[i] = new GlyphData(uv.ToVector4(), w, h, zero.X, zero.Y - pos.Y0 * size);
+            glyphs[i] = new GlyphData(uv.ToVector4(), w, h, cx, cy);
 
             if (i < len - 1) {
-                font.Kernings.TryGetValue((c, Name[i + 1]), out var kern);
-                zero.X += kern * size * 2f;
+                font.Kernings.TryGetValue((c, name[i + 1]), out var kern);
+                zero.X += kern * size;
             }
 
             zero.X += glyph.Advance * size;
-            zero.X += 12f / font.PixelRange * size * 2f;
         }
 
-        for (var index = 0; index < _glyphs.Length; index++) {
-            _glyphs[index].Center(zero.X / 2f);
+        totalWidth = zero.X;
+        for (var index = 0; index < glyphs.Length; index++) {
+            glyphs[index].Center(totalWidth / 2f);
         }
 
-        Rotation = new Vector4(0, 1, 1, -1);
-        Color = new Color(0xFC, 0xDF, 0, 1);
+        return glyphs;
     }
-    
+
     public override void Draw(float yOffset, List<VertexObject> targets, double time) {
         for (var index = 0; index < _glyphs.Length; index++) {
             var g = _glyphs[index];
@@ -82,10 +108,10 @@ public class TypeName : SubRenderBase {
             targets.Add(new VertexObject(Parent.Position, g.UV, g.Scale, Rotation, Extra, Color));
         }
     }
-    
-    private struct GlyphData(Vector4 uv, float w, float h, float x, float y) {
+
+    internal struct GlyphData(Vector4 uv, float w, float h, float cx, float cy) {
         public Vector4 UV = uv;
-        public Vector4 Scale = new(w, h, 1f * w + x, 1f * h + y);
+        public Vector4 Scale = new(w, h, cx, cy);
 
         public void Center(float x) {
             Scale.Z -= x;

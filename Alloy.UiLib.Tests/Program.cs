@@ -35,6 +35,12 @@ internal static class Program
         Run("Menu buttons share the ribbon center", MenuBarAlignmentTests.Run);
         Run("HP bars keep world size across zoom", HpBarScaleTests.Run);
         Run("Sinking and HP bar match Flash", SinkParityTests.Run);
+        Run("Shop items match Flash", ShopParityTests.Run);
+        Run("Wrapped text fits its field", SimpleTextWrapTests.Run);
+        Run("Portal panels match Flash", PortalParityTests.Run);
+        Run("Portal transfer opens a fresh handshake", ReconnectTransferTests.Run);
+        Run("Portal world names match Flash", PortalNameTextTests.Run);
+        Run("Name and character changers match Flash", ChangerParityTests.Run);
         Run("MapBackground embedded map decodes", MapBackgroundDecodeTests.Run);
         Run("MapBackground camera framing", MapBackgroundCameraTests.Run);
         Run("MapBackground wall entities", MapBackgroundEntitiesTests.Run);

@@ -273,6 +273,12 @@ public class Player : Entity {
                 case StatsType.GuildRank:
                     GuildRank = stat.Value;
                     break;
+                case StatsType.NameChosen:
+                    // Flash parity (GameServerConnection NAME_CHOSEN_STAT
+                    // handler): player.nameChosen_ = value != 0. Without this
+                    // the name changer always shows the buy branch.
+                    NameChosen = stat.Value != 0;
+                    break;
                 case StatsType.Oxygen:
                     OxygenBar = stat.Value;
                     break;

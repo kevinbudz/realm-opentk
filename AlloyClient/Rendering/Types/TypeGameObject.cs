@@ -32,6 +32,11 @@ public sealed class TypeGameObject : RenderBase {
         _hpBar = new TypeHpBar(this, entity);
         _effects = new TypeEffects(this, entity);
 
+        // Flash parity (GameObject.generateNameText): non-player floating
+        // names (portal "Realm (count)", enemy ShowName) render white; the
+        // gold TypeName default matches Player.NAME_COLOUR instead.
+        _name.Color = Color.White;
+
         Color = Color.Black;
     }
     
@@ -59,7 +64,13 @@ public sealed class TypeGameObject : RenderBase {
         _effects.SetAlpha(alpha);
     }
 
-    public override void SetName(string name) { }
+    // Flash parity (GameObject NAME_STAT handler + Portal.draw): the Name
+    // stat rebuilds the floating label (e.g. the PortalMonitor
+    // "Realm (count)" rename); Nexus portals draw it world-space.
+    public override void SetName(string name) {
+        _name.Name = name ?? "";
+        _name.SetTextures();
+    }
 
     public override void Draw(List<VertexObject> targets, double time) {
         var s = MathF.Sin(-Entity.Rotation);
@@ -77,6 +88,14 @@ public sealed class TypeGameObject : RenderBase {
             Mask1 = new Vector4(sink.Drop, sink.Rise, 0f, 0f)
         };
         targets.Add(sprite);
+
+        // Flash parity (Portal.draw calls drawName when nexusPortal_):
+        // Nexus realm portals float their live name ("Realm (count)").
+        // Gated on a received name so portals never show the static
+        // DisplayName fallback that Flash's null name_ renders as empty.
+        if (Entity.Properties.NexusPortal && !string.IsNullOrEmpty(Entity.Name)) {
+            _name.Draw(TypeBar.BaseYOffset, targets, time);
+        }
 
         if (Entity.Properties.Static) {
             return;

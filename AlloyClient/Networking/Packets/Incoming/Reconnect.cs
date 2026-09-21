@@ -1,8 +1,4 @@
-﻿using AlloyClient.Data;
-using AlloyClient.Game;
-using AlloyClient.Networking.Packets.Outgoing;
-
-namespace AlloyClient.Networking.Packets.Incoming;
+﻿namespace AlloyClient.Networking.Packets.Incoming;
 
 public class Reconnect : IncomingPacket<Reconnect> {
     public int GameId;
@@ -18,17 +14,10 @@ public class Reconnect : IncomingPacket<Reconnect> {
     }
 
     public override void Handle() {
-        Map.Entities.Clear();
-        Map.EntityStorage.Clear();
-
-        var login = GlobalData.Get<LoginData>();
-        var hello = Hello.CreatePacket();
-        hello.BuildVersion = Settings.BuildVersion;
-        hello.GameId = GameId;
-        hello.Username = login.Username;
-        hello.Password = login.Password;
-        hello.MapJSON = "";
-        Client.QueuePacket(hello);
+        // Flash parity (GameSpriteMediator.onReconnect): this must open a new
+        // socket handshake for GameId. Hello on the old Connected socket is
+        // ignored by the server (Hello requires Handshaked state).
+        Client.ReconnectTo(GameId);
     }
 
     public override string ToString() {

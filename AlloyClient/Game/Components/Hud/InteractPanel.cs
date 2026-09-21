@@ -73,23 +73,40 @@ public sealed class InteractPanel : Sprite {
         panel.X = panel is ContainerPanel ? (HudView.HudWidth - panel.Width) / 2 : 6;
     }
     
+    // Flash parity (GameSprite.updateNearestInteractive over IInteractiveObject):
+    // SellableObject (Merchant/GuildMerchant/ClosedVaultChest) is interactive
+    // and opens a SellableObjectPanel that sends Buy. NameChanger,
+    // CharacterChanger (CharacterChanger/NameChanger.as, isInteractive_=true)
+    // open their own panels the same way.
     public static bool IsInteractiveObject(Entity entity) {
         return entity.Properties.Class switch {
             "Container" => true,
             "OneWayContainer" => true,
             "Portal" => true,
+            "GuildHallPortal" => true,
+            "Merchant" => true,
+            "GuildMerchant" => true,
+            "ClosedVaultChest" => true,
+            "NameChanger" => true,
+            "CharacterChanger" => true,
             _ => false
         };
     }
 
-    private static Panel GetInteractPanel(Entity entity) {
+    public static Panel GetInteractPanel(Entity entity) {
         if (entity == null)
             return null;
-        
+
         return entity.Properties.Class switch {
             "Container" => new ContainerPanel(entity, false),
             "OneWayContainer" => new ContainerPanel(entity, true),
             "Portal" => new PortalPanel(entity),
+            "GuildHallPortal" => new GuildHallPortalPanel(entity),
+            "Merchant" => new SellableObjectPanel(entity),
+            "GuildMerchant" => new SellableObjectPanel(entity),
+            "ClosedVaultChest" => new SellableObjectPanel(entity),
+            "NameChanger" => new NameChangerPanel(entity),
+            "CharacterChanger" => new CharacterChangerPanel(),
             _ => null
         };
     }

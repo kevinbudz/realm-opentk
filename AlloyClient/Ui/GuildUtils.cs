@@ -12,6 +12,18 @@ public static class GuildUtils {
     public const int Founder = 40;
     public const int MaxMembers = 50;
 
+    // Flash parity (com.company.assembleegameclient.util.GuildUtil.rankToString).
+    public static string RankToString(int rank) {
+        return rank switch {
+            Initiate => "Initiate",
+            Member => "Member",
+            Officer => "Officer",
+            Leader => "Leader",
+            Founder => "Founder",
+            _ => "Unknown"
+        };
+    }
+
     public static TextureInfo? RankToIcon(int rank) {
         var index = rank switch {
             Initiate => 20,

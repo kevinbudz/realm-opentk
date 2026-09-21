@@ -96,7 +96,21 @@ public class Entity {
 
     public int CustomTexture;
 
-    public bool PortalUsable;
+    // Flash parity (Portal.active_): defaults to true; the wire Active stat
+    // (34) drives it, so usable portals show Enter until closed.
+    public bool PortalUsable = true;
+
+    // Flash parity (SellableObject/Merchant): shop stats carried on the wire
+    // as MerchandiseType(31)/Price(32)/Currency(37)/Count(39)/MinsLeft(40)/
+    // Discount(41)/RankReq(42). Defaults mirror the Flash field initializers
+    // (merchandiseType_/count_/minsLeft_ = -1, currency_ = INVALID).
+    public int MerchandiseType = -1;
+    public int MerchandisePrice;
+    public int MerchandiseCurrency = -1;
+    public int MerchandiseCount = -1;
+    public int MerchandiseMinsLeft = -1;
+    public int MerchandiseDiscount;
+    public int MerchandiseRankReq;
 
     #endregion
 
@@ -127,6 +141,23 @@ public class Entity {
         TextureData = ObjectLibrary.TypeToTextureData[type];
         Texture = TextureData.HasAnimationData ? TextureData.AnimatedTextures.FaceRight[0] : TextureData.GetTexture();
         RenderBaseType = GetRenderType(type);
+    }
+
+    // Flash parity (Merchant.setMerchandiseType/getTexture): a shopkeeper
+    // renders the sold item's texture, not the Merchant base sprite. Only the
+    // Merchant class overrides getTexture in Flash; GuildMerchant and
+    // ClosedVaultChest keep their own sprite. Unknown merchandise types keep
+    // the base texture instead of throwing.
+    public void RefreshMerchandiseTexture() {
+        if (Properties?.Class != "Merchant")
+            return;
+        if (MerchandiseType <= 0 || MerchandiseType > ushort.MaxValue)
+            return;
+        if (!ObjectLibrary.TypeToTextureData.TryGetValue((ushort)MerchandiseType, out var merchandise))
+            return;
+        TextureData = merchandise;
+        Texture = merchandise.HasAnimationData ? merchandise.AnimatedTextures.FaceRight[0] : merchandise.GetTexture();
+        RenderBaseType?.SetTexture(Texture);
     }
 
     public Color GetDominateColor() {
@@ -470,6 +501,35 @@ public class Entity {
                     break;
                 case StatsType.PortalUsable:
                     PortalUsable = stat.Value != 0;
+                    break;
+                case StatsType.Active:
+                    // Flash parity (GameServerConnection ACTIVE_STAT handler):
+                    // portal.active_ = value != 0. The realm server tracks
+                    // usability in Portal.Usable but never exports it, so
+                    // without this the panel would always show Full.
+                    PortalUsable = stat.Value != 0;
+                    break;
+                case StatsType.MerchandiseType:
+                    MerchandiseType = stat.Value;
+                    RefreshMerchandiseTexture();
+                    break;
+                case StatsType.MerchandisePrice:
+                    MerchandisePrice = stat.Value;
+                    break;
+                case StatsType.MerchandiseCurrency:
+                    MerchandiseCurrency = stat.Value;
+                    break;
+                case StatsType.MerchandiseCount:
+                    MerchandiseCount = stat.Value;
+                    break;
+                case StatsType.MerchandiseMinsLeft:
+                    MerchandiseMinsLeft = stat.Value;
+                    break;
+                case StatsType.MerchandiseDiscount:
+                    MerchandiseDiscount = stat.Value;
+                    break;
+                case StatsType.MerchandiseRankReq:
+                    MerchandiseRankReq = stat.Value;
                     break;
             }
         }

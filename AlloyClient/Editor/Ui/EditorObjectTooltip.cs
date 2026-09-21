@@ -105,6 +105,7 @@ internal sealed class EditorPaletteTooltip : Tooltip {
         AddFlag(values, "DrawOnGround", properties.DrawOnGround);
         AddFlag(values, "Container", properties.Container);
         AddFlag(values, "LockedPortal", properties.LockedPortal);
+        AddFlag(values, "NexusPortal", properties.NexusPortal);
         AddFlag(values, "Skin", properties.Skin);
         AddFlag(values, "NoSkinSelect", properties.NoSkinSelect);
         if (properties.RealSize >= 0) {

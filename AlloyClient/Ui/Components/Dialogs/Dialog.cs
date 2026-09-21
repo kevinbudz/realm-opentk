@@ -1,6 +1,7 @@
 ﻿using System;
 using Alloy.UiLib.BuiltIn;
 using Alloy.UiLib.Core;
+using AlloyClient.Display;
 using AlloyClient.Ui.Components.Buttons;
 
 using System.Collections.Generic;
@@ -15,7 +16,7 @@ public enum DialogState {
     Finished = 2
 }
 
-public class Dialog : UiElement {
+public class Dialog : UiElement, IDialog {
 
     private const int BoxWidth = 300;
     private const int BoxPadding = 16;
@@ -25,7 +26,7 @@ public class Dialog : UiElement {
     private const int ActionGap = 18;
     private const int BottomPadding = 10;
 
-    public DialogState State = DialogState.Active;
+    public DialogState State { get; set; } = DialogState.Active;
 
     public Dialog(string title, string message, DialogOption confirm, DialogOption cancel = null) {
         X = Settings.DefaultScreenWidth / 2;

@@ -53,6 +53,7 @@ public class ObjectProperties {
 
     public readonly bool Container;
     public readonly bool LockedPortal;
+    public readonly bool NexusPortal;
     
     public readonly List<int> SlotTypes;
     public readonly List<ushort?> Equipment;
@@ -118,6 +119,7 @@ public class ObjectProperties {
 
         Container = e.HasElement("Container");
         LockedPortal = e.HasElement("LockedPortal");
+        NexusPortal = e.HasElement("NexusPortal");
 
         Equipment = [];
         var equipment = e.GetValue<string>("Equipment");
