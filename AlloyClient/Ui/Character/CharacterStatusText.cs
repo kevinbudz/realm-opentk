@@ -50,6 +50,11 @@ public class CharacterStatusText : Sprite {
         X = pos.X;
         Y = pos.Y - (int)drift;
         Alpha = (float)(1 - elapsed);
+        // Player Alpha option: damage text attached to other players fades
+        // with the slider; text on the local player and on enemies stays.
+        if (_owner is Player && _owner != Map.LocalPlayer) {
+            Alpha *= Settings.GetOtherPlayerAlpha(false);
+        }
         return true;
     }
 }

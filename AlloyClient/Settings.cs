@@ -97,6 +97,8 @@ public static class Settings {
     // Misc
     public readonly static InputSetting PerformanceStats = new(Scancode.F5);
     public readonly static InputSetting SwitchTabs = new(Scancode.B);
+    public readonly static InputSetting MiniMapZoomIn = new(Scancode.Equals);
+    public readonly static InputSetting MiniMapZoomOut = new(Scancode.Dash);
     public readonly static InputSetting ResetMScale = new(Scancode.Unknown);
     public readonly static InputSetting SetBagPriority = new(Scancode.Unknown);
     public readonly static InputSetting FullscreenKey = new(Scancode.F11);
@@ -112,7 +114,8 @@ public static class Settings {
     // Camera
     public readonly static ValueSetting<int> MaxRenderDistance = new(20);
     public readonly static ValueSetting<bool> CenterPlayer = new(true);
-    public readonly static ValueSetting<float> CameraAngle = new(0f);
+    public readonly static ValueSetting<float> CameraAngle = new(7 * MathF.PI / 4);
+    public readonly static ValueSetting<float> DefaultCameraAngle = new(7 * MathF.PI / 4);
     public readonly static ValueSetting<float> CameraZoom = new(1f);
     public readonly static ValueSetting<bool> AllowRotation = new(true);
     public readonly static ValueSetting<float> RotateSpeed = new(0.003f);
@@ -133,10 +136,9 @@ public static class Settings {
     public readonly static ValueSetting<float> MasterVolume = new(0.5f);
     public readonly static ValueSetting<float> MusicVolume = new(1f);
     public readonly static ValueSetting<float> SfxVolume = new(1f);
-    public readonly static ValueSetting<bool> PlayMaster = new(true);
-    public readonly static ValueSetting<bool> PlayMusic = new(true);
-    public readonly static ValueSetting<bool> PlaySfx = new(true);
-    public readonly static ValueSetting<bool> PlayPewPew = new(true);
+    // Note: the old PlayMaster/PlayMusic/PlaySfx/PlayPewPew mute flags were
+    // removed; the volume values below are the single source of truth
+    // (0 is muted). Stale flags in existing settings.xml files are ignored.
     
     // Chat
     public readonly static ValueSetting<int> ChatInclude = new(0);
@@ -144,9 +146,34 @@ public static class Settings {
     public readonly static ValueSetting<float> ChatScaling = new(1f);
     public readonly static ValueSetting<int> ChatHideList = new(0);
 
-    // Particles
-    public readonly static ValueSetting<bool> EyeCandyParticles = new(true);
-    public readonly static ValueSetting<bool> ReducedParticles = new(false);
+    // Particles (Flash parity: particles; Reduced is an Alloy extension)
+    public readonly static ValueSetting<ParticleMode> EyeCandyParticles = new(ParticleMode.On);
+
+    // Ally visibility (Flash parity: allyShots/allyDamage/allyNotifs)
+    // AllyInfo is the master switch for the "Ally Information" option group;
+    // when off, all ally information is hidden regardless of the sub-toggles.
+    public readonly static ValueSetting<bool> AllyInfo = new(true);
+    public readonly static ValueSetting<bool> AllyShots = new(true);
+    public readonly static ValueSetting<bool> AllyDamage = new(true);
+    public readonly static ValueSetting<bool> AllyNotifs = new(true);
+
+    // Player alpha (Alloy extension, no Flash parity): the master switch for
+    // the "Player Alpha" option group. While off, all players render fully
+    // opaque; while on, other players render at PlayerAlphaValue opacity.
+    public readonly static ValueSetting<bool> PlayerAlpha = new(false);
+    public readonly static ValueSetting<float> PlayerAlphaValue = new(1f);
+
+    // World rendering (Flash parity: projOutline/drawShadows)
+    public readonly static ValueSetting<bool> ProjectileOutline = new(true);
+    public readonly static ValueSetting<bool> DrawShadows = new(true);
+
+    // Gameplay (Flash parity: Options Gameplay tab)
+    public readonly static ValueSetting<bool> TextBubbles = new(true);
+    public readonly static ValueSetting<bool> ShowQuestPortraits = new(true);
+    public readonly static ValueSetting<bool> ShowGuildInvitePopup = new(true);
+    public readonly static ValueSetting<bool> ShowTradePopup = new(true);
+    public readonly static ValueSetting<bool> ShowTierTag = new(true);
+    public readonly static ValueSetting<string> Cursor = new("4");
 
     // Other
     public readonly static ValueSetting<bool> ToggleLeftToMax = new(true);
@@ -183,11 +210,43 @@ public static class Settings {
         }
     }
 
-    public static float GetMasterVolume() => PlayMaster ? MasterVolume : 0;
-    
-    public static float GetMusicVolume() => PlayMusic ? MusicVolume : 0;
+    public static float GetMasterVolume() => MasterVolume;
 
-    public static float GetSfxVolume() => PlaySfx ? SfxVolume : 0;
+    public static float GetMusicVolume() => MusicVolume;
+
+    public static float GetSfxVolume() => SfxVolume;
+
+    public static void SetMasterVolume(float volume) {
+        MasterVolume.Set(Math.Clamp(volume, 0f, 1f));
+    }
+
+    public static void SetMusicVolume(float volume) {
+        MusicVolume.Set(Math.Clamp(volume, 0f, 1f));
+    }
+
+    public static void SetSfxVolume(float volume) {
+        SfxVolume.Set(Math.Clamp(volume, 0f, 1f));
+    }
+
+    // Flash parity filters (GameServerConnection.as): ally visuals and
+    // damage numbers render unless the matching option is off, in which
+    // case only the local player's own events still show.
+    public static bool ShouldShowAllyShot(bool ownedByLocalPlayer) => AllyInfo && (AllyShots || ownedByLocalPlayer);
+
+    public static bool ShouldShowAllyDamage(int targetId, int localPlayerId) => AllyInfo && (AllyDamage || targetId == localPlayerId);
+
+    public static bool ShouldShowAllyNotification(bool targetIsPlayer, int objectId, int localPlayerId) =>
+        AllyInfo && (AllyNotifs || !targetIsPlayer || objectId == localPlayerId);
+
+    // Player alpha multiplier for the given locality: the local player is
+    // always fully opaque; other players use the slider value while the
+    // option is on, and are fully opaque while it is off.
+    public static float GetOtherPlayerAlpha(bool isLocalPlayer) {
+        if (isLocalPlayer || !PlayerAlpha.Value) {
+            return 1f;
+        }
+        return Math.Clamp(PlayerAlphaValue.Value, 0f, 1f);
+    }
     
     #region SettingParsing
     

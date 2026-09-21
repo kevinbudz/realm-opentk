@@ -37,6 +37,11 @@ public class Damage : IncomingPacket<Damage> {
     }
 
     public override void Handle() {
+        // Flash parity (Parameters allyDamage): damage on other entities is
+        // skipped while the option is off; the local player's own hits stay.
+        if (!Settings.ShouldShowAllyDamage(TargetId, Map.LocalPlayerId))
+            return;
+
         if (!Map.Entities.TryGetValue(TargetId, out var target))
             return;
 

@@ -13,7 +13,8 @@ public readonly struct FountainParticle(double startTime, float angle) {
     public readonly Vector2 Velocity = new(MathF.Cos(angle), MathF.Sin(angle));
 }
 
-public readonly struct HitParticle(float x, float y) {
+public struct HitParticle(float x, float y, double lifetime) {
     public readonly float X = x;
     public readonly float Y = y;
+    public double TimeLeft = lifetime;
 }

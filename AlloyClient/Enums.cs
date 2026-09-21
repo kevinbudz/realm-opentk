@@ -10,6 +10,12 @@ public enum FullscreenType {
     Borderless
 }
 
+public enum ParticleMode {
+    Off,
+    Reduced,
+    On
+}
+
 public enum SpeechColors {
     Default,
     Enemy,

@@ -72,12 +72,42 @@ public sealed class TypePlayer : RenderBase {
     }
 
     public override void Draw(List<VertexObject> targets, double time) {
+        // Player Alpha option: other players (and their names, bars and
+        // condition icons) render at the slider opacity while the option is
+        // on. The multiplier scales the stored alphas only for the vertices
+        // emitted below, so the Invisible effect's base alpha is preserved.
+        var alphaMult = Settings.GetOtherPlayerAlpha(_player == Map.LocalPlayer);
+        var mainAlpha = Extra.Alpha;
+        var nameAlpha = _typeName.Extra.Alpha;
+        var hpAlpha = _hpBar.Extra.Alpha;
+        var mpAlpha = _mpBar.Extra.Alpha;
+        var fxAlpha = _effects.Extra.Alpha;
+        if (alphaMult < 1f) {
+            Extra.Alpha *= alphaMult;
+            _typeName.Extra.Alpha *= alphaMult;
+            _hpBar.Extra.Alpha *= alphaMult;
+            _mpBar.Extra.Alpha *= alphaMult;
+            _effects.Extra.Alpha *= alphaMult;
+        }
+
+        try {
+            DrawInner(targets, time);
+        } finally {
+            Extra.Alpha = mainAlpha;
+            _typeName.Extra.Alpha = nameAlpha;
+            _hpBar.Extra.Alpha = hpAlpha;
+            _mpBar.Extra.Alpha = mpAlpha;
+            _effects.Extra.Alpha = fxAlpha;
+        }
+    }
+
+    private void DrawInner(List<VertexObject> targets, double time) {
         var s = MathF.Sin(-Entity.Rotation);
         var c = MathF.Cos(-Entity.Rotation);
         var k = Entity.Size / 100f;
         var f = Entity.Flipped ? 1f : -1f;
         Rotation = new Vector4(s, c, k, f);
-        
+
         Entity.HeightOffset = GetVisibleTopOffset(k);
 
         // Flash-parity sinking: world-space clip packed in Mask1 (x = drop, y =

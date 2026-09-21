@@ -42,35 +42,90 @@ public class OptionTabView : Container {
                 break;
         }
 
-        PositionChildren();
+        if (name == OptionsView.SoundTab)
+        {
+            PositionSoundChildren();
+        }
+        else
+        {
+            PositionChildren();
+        }
 
-        if (_container.Height > Height) {
+        // Note: compare against the fixed visible height, not the live
+        // Height property. The parent bounds grow with _container content,
+        // so _container.Height > Height is never true once content overflows.
+        var visibleHeight = OptionsView.OptionsHeight;
+        if (_container.Height > visibleHeight)
+        {
             _scrollbar = new VerticalScrollBar(this, new VerticalScrollBarConfig {
-                X = OptionsView.PanelWidth - 15,
+                X = OptionsView.PanelWidth - 25,
+                Y = 5,
                 Width = 15,
-                Height = Height,
+                Height = visibleHeight - 10,
                 TotalContentHeight = _container.Height,
-                VisibleContentHeight = Height,
+                VisibleContentHeight = visibleHeight,
                 OnValueChanged = val => _container.Y = -val
             });
             AddChild(_scrollbar);
         }
     }
 
-    private void PositionChildren() {
-        var i = 0;
+    private void PositionSoundChildren()
+    {
+        var y = 22;
         foreach (var option in _options) {
             if (option == null) {
-                i++;
+                y += 48;
                 continue;
             }
 
-            option.X += i % 2 == 0 ? 20 : 415;
-            option.Y += i / 2 * 44 + 22;
+            option.X = 20;
+            option.Y = y;
+            _container.AddChild(option);
+
+            y += 48;
+        }
+    }
+
+    // Two-column flow layout. For single-row options this matches the old
+    // index grid exactly. Pinned options always take the left column, and
+    // full-width dividers sync both columns to the taller one before taking
+    // their own row.
+    private void PositionChildren()
+    {
+        var xCols = new[] { 20, 415 };
+        var yCols = new[] { 22, 22 };
+        var col = 0;
+        foreach (var option in _options)
+        {
+            if (option == null)
+            {
+                yCols[col] += 44;
+                col ^= 1;
+                continue;
+            }
+
+            if (option.FullWidth)
+            {
+                var rowY = Math.Max(yCols[0], yCols[1]);
+                option.X += 20;
+                option.Y += rowY;
+
+                _container.AddChild(option);
+
+                yCols[0] = yCols[1] = rowY + option.RowHeight;
+                col = 0;
+                continue;
+            }
+
+            var c = option.PinLeft ? 0 : col;
+            option.X += xCols[c];
+            option.Y += yCols[c];
 
             _container.AddChild(option);
 
-            i++;
+            yCols[c] += option.RowHeight;
+            col = c ^ 1;
         }
     }
 
@@ -111,6 +166,8 @@ public class OptionTabView : Container {
         _options.Add(new KeyMapperOption(Settings.InvSix, "Use Inventory Slot 6", "Use item in inventory slot 6"));
         _options.Add(new KeyMapperOption(Settings.InvSeven, "Use Inventory Slot 7", "Use item in inventory slot 7"));
         _options.Add(new KeyMapperOption(Settings.InvEight, "Use Inventory Slot 8", "Use item in inventory slot 8"));
+        _options.Add(new KeyMapperOption(Settings.MiniMapZoomIn, "Mini-Map Zoom In", "This key will zoom in the minimap"));
+        _options.Add(new KeyMapperOption(Settings.MiniMapZoomOut, "Mini-Map Zoom Out", "This key will zoom out the minimap"));
         _options.Add(new KeyMapperOption(Settings.Escape, "Escape To Nexus", "This key will instantly escape you to the Nexus"));
         _options.Add(new KeyMapperOption(Settings.Options, "Show Options", "This key will bring up the options screen"));//TODO: force this to be disabled to prevent changing it
         _options.Add(new KeyMapperOption(Settings.SwitchTabs, "Switch Tabs", "This key will switch from available tabs"));
@@ -139,54 +196,53 @@ public class OptionTabView : Container {
     }
 
     private void AddGraphicsOptions() {
-        _options.Add(new ChoiceOption<float>(Settings.CameraAngle, ["45°", "0°"], [7 * MathF.PI / 4, 0f], "Default Camera Angle", "This toggles the default camera angle", OnDefautCameraAngleChange));
+        _options.Add(new ChoiceOption<float>(Settings.DefaultCameraAngle, ["45°", "0°"], [7 * MathF.PI / 4, 0f], "Default Camera Angle", "This toggles the default camera angle", OnDefautCameraAngleChange));
         _options.Add(new ChoiceOption<bool>(Settings.CenterPlayer, OnOffLabels, OnOffValues, "Center On Player", "This toggles whether the player is centered or offset"));
-        _options.Add(new ChoiceOption<bool>(Settings.EyeCandyParticles, OnOffLabels, OnOffValues, "Eye Candy Particles", "This toggles whether to show eye candy particles, disabling this will improve performance."));
-        _options.Add(new ChoiceOption<bool>(Settings.ReducedParticles, OnOffLabels, OnOffValues, "Reduced Particles", "This toggles whether to show reduced particles, enabling this will improve performance."));
+        _options.Add(new ChoiceOption<bool>(Settings.DrawShadows, OnOffLabels, OnOffValues, "Draw Shadows", "This toggles whether to draw shadows"));
+        _options.Add(new ChoiceOption<bool>(Settings.ProjectileOutline, OnOffLabels, OnOffValues, "Projectile Outline", "Makes projectiles render with an outline."));
+        _options.Add(new ChoiceOption<ParticleMode>(Settings.EyeCandyParticles, ["Off", "Reduced", "On"], [ParticleMode.Off, ParticleMode.Reduced, ParticleMode.On], "Eye Candy Particles", "This toggles eye candy particles. Reduced shows fewer of them; disabling this will improve performance."));
         _options.Add(new ChoiceOption<FullscreenType>(Settings.FullscreenMode, ["Exclusive", "Borderless"], [FullscreenType.Exclusive, FullscreenType.Borderless], "Fullscreen type", "Changes which type fullscreen uses", OnWindowModeChange));
         _options.Add(new ChoiceOption<int>(Settings.FpsCap, ["30", "60", "90", "120", "144", "165", "240", "300", "360", "None"], [30, 60, 90, 120, 144, 165, 240, 300, 360, -1], "FPS Cap", "This allows you to choose a frame rate cap", OnFPSChange));
         _options.Add(new ChoiceOption<int>(Settings.MaxRenderDistance, ["Low", "Medium", "High", "Max"], [15, 20, 25, 60], "Max Render Distance", "Pick the maximum render distance of your client. Can improve performance greatly.", OnRenderDistanceChange));
-        _options.Add(new ChoiceOption<float>(Settings.CameraZoom, ["100%", "90%", "80%", "70%", "60%", "50%", "200%", "150%"], [1f, 0.9f, 0.8f, 0.7f, 0.6f, 0.5f, 2f, 1.5f], "Zoom", "Zooms your game in and out so you can see more or less things at once. You can also use the /mscale command or use Shift + Scroll. (Available options: 100%, 90%, 80%, 70%, 60%, 50%, 200%, 150%)", OnMScaleChange));
         _options.Add(new ChoiceOption<bool>(Settings.VSync, OnOffLabels, OnOffValues, "VSync", "This toggles whether to have VSync enabled or not.", OnVSyncToggle));
+        _options.Add(new DividerOption());
+        _options.Add(new ToggleGroupOption(Settings.AllyInfo,
+            [("Shots", Settings.AllyShots), ("Damage", Settings.AllyDamage), ("Notifications", Settings.AllyNotifs)],
+            "Ally Information", "Show combat information from other players. Turn this off to hide it all and improve performance."));
+        _options.Add(new ToggleSliderOption(Settings.PlayerAlpha, Settings.PlayerAlphaValue,
+            "Player Alpha", "Fade other players. Turn this on, then use the slider to change the opacity of other players and everything attached to them."));
     }
 
     private void AddSoundOptions() {
-        _options.Add(new ChoiceOption<bool>(Settings.PlayMaster, OnOffLabels, OnOffValues, "Play Master", "This toggles whether all sound is played", OnPlayMasterChange));
         _options.Add(new SliderOption(Settings.MasterVolume, "Master Volume", OnMasterVolumeChange));
-        _options.Add(new ChoiceOption<bool>(Settings.PlayMusic, OnOffLabels, OnOffValues, "Play Music", "This toggles whether music is played", OnPlayMusicChange));
         _options.Add(new SliderOption(Settings.MusicVolume, "Music Volume", OnMusicVolumeChange));
-        _options.Add(new ChoiceOption<bool>(Settings.PlaySfx, OnOffLabels, OnOffValues, "Play Sound Effects", "This toggles whether sound effects are played", OnPlaySoundEffectsChange));
         _options.Add(new SliderOption(Settings.SfxVolume, "Effects Volume", OnSfxVolumeChange));
     }
 
     private void AddExtraOptions() {
-
+        _options.Add(new ChoiceOption<bool>(Settings.ShowQuestPortraits, OnOffLabels, OnOffValues, "Show Quest Portraits", "This toggles whether quest portraits are displayed"));
+        _options.Add(new ChoiceOption<bool>(Settings.TextBubbles, OnOffLabels, OnOffValues, "Draw Text Bubbles", "This toggles whether to draw text bubbles"));
+        _options.Add(new ChoiceOption<bool>(Settings.ShowGuildInvitePopup, OnOffLabels, OnOffValues, "Show Guild Invite Panel", "This toggles whether to show guild invites in the lower-right panel or just in chat."));
+        _options.Add(new ChoiceOption<bool>(Settings.ShowTradePopup, OnOffLabels, OnOffValues, "Show Trade Popup", "This toggles whether to show trade requests in a panel or just in chat."));
+        _options.Add(new ChoiceOption<bool>(Settings.ShowTierTag, OnOffLabels, OnOffValues, "Show Tier Tag", "This toggles whether to show tier tags on your gear."));
+        _options.Add(new ChoiceOption<string>(Settings.Cursor,
+            ["OS", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"],
+            ["auto", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"],
+            "Cursor", "Changing this will give you a new mouse cursor."));
     }
     
-    private void OnPlayMasterChange() {
-        Audio.SetMasterVolume(Settings.GetMasterVolume());
-    }
-
     private void OnMasterVolumeChange(float obj) {
-        Settings.MasterVolume.Set(obj);
+        Settings.SetMasterVolume(obj);
         Audio.SetMasterVolume(Settings.GetMasterVolume());
-    }
-    
-    private void OnPlaySoundEffectsChange() {
-        Audio.SfxChannel.SetVolume(Settings.GetSfxVolume());
     }
 
     private void OnSfxVolumeChange(float obj) {
-        Settings.SfxVolume.Set(obj);
+        Settings.SetSfxVolume(obj);
         Audio.SfxChannel.SetVolume(Settings.GetSfxVolume());
     }
 
-    private void OnPlayMusicChange() {
-        Audio.MusicChannel.SetVolume(Settings.GetMusicVolume());
-    }
-    
     private void OnMusicVolumeChange(float obj) {
-        Settings.MusicVolume.Set(obj);
+        Settings.SetMusicVolume(obj);
         Audio.MusicChannel.SetVolume(Settings.GetMusicVolume());
     }
 
@@ -199,6 +255,7 @@ public class OptionTabView : Container {
     }
 
     private void OnDefautCameraAngleChange() {
+        Settings.CameraAngle.Set(Settings.DefaultCameraAngle);
     }
 
     private void OnVSyncToggle() {
@@ -212,9 +269,6 @@ public class OptionTabView : Container {
 
     private void OnFPSChange() {
         Main.OnScreenChange.Dispatch(ScreenType.Game);
-    }
-
-    private void OnMScaleChange() {
     }
 
     private void OnWindowModeChange() {

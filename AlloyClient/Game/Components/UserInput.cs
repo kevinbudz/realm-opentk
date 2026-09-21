@@ -192,10 +192,23 @@ public sealed class UserInput : Sprite {
                 Panel.OnInteract.Dispatch();
                 break;
             case true when Settings.ResetCameraAngle.Equals(key):
-                Settings.CameraAngle.Set(0f);
+                Settings.CameraAngle.Set(Settings.DefaultCameraAngle);
+                break;
+            case true when Settings.MiniMapZoomIn.Equals(key):
+                Minimap.OnZoom.Dispatch(1);
+                break;
+            case true when Settings.MiniMapZoomOut.Equals(key):
+                Minimap.OnZoom.Dispatch(-1);
                 break;
             case true when Settings.ResetMScale.Equals(key):
                 Settings.CameraZoom.Set(1f);
+                break;
+            case true when Settings.PerformanceStats.Equals(key):
+                GameScreen.TogglePerformanceStats();
+                break;
+            case true when Settings.CenterPlayerKey.Equals(key):
+                Settings.CenterPlayer.Set(!Settings.CenterPlayer.Value);
+                Settings.SaveSettings();
                 break;
             case true when Settings.Options.Equals(key):
                 ClearMovement();

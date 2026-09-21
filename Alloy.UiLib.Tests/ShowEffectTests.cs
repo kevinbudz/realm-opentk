@@ -192,16 +192,20 @@ internal static class ShowEffectTests {
         }
     }
 
-    // The 2s hit flash used to die after ~270ms: its lifetime was charged
-    // once per live particle instead of once per update.
+    // Flash HitEffect is a one-shot burst: all 10 particles spawn at once,
+    // each living 200 + random * 100ms. The flash must outlive the 200ms
+    // minimum (no per-particle overcharging) and drain past the 300ms max.
     private static void HitEffectLivesFullDuration() {
         Map.Reset();
         Map.Entities[7] = new Player { ObjectId = 7, Position = new Vector2(10, 20) };
         try {
             Map.AddParticleEffect(new AlloyClient.ParticleEffects.HitEffect(Map.Entities[7], 0xFF0000));
-            for (var f = 0; f < 40; f++)
+            for (var f = 0; f < 10; f++)
                 UpdateFrame(f * 16.0, 16.0);
             Equal(1, Map.ParticleGenCount);
+            for (var f = 10; f < 40; f++)
+                UpdateFrame(f * 16.0, 16.0);
+            Equal(0, Map.ParticleGenCount);
         } finally {
             Map.Reset();
         }

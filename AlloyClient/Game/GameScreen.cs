@@ -38,6 +38,9 @@ public sealed class GameScreen : Screen {
         AddChild(_hud = new HudView());
         AddChild(_chat = new ChatBox());
         AddChild(_debugStats = new DebugStats());
+        // Flash parity (MapUserInput.togglePerformanceStats): the profiler
+        // starts hidden and only shows while toggled on.
+        _debugStats.Visible = false;
 
         GameSprite = this; // TODO: remove this ;-;
     }
@@ -52,6 +55,14 @@ public sealed class GameScreen : Screen {
         GameSprite.ApplyChatOptions();
     }
 
+    public static void TogglePerformanceStats() {
+        if (GameSprite is null) {
+            return;
+        }
+
+        GameSprite._debugStats.Visible = !GameSprite._debugStats.Visible;
+    }
+
     public override void Update(GameTime gameTime) {
         Client.Tick();
 
@@ -60,7 +71,7 @@ public sealed class GameScreen : Screen {
         }
 
         _camera = Camera.Update(Map.LocalPlayer.Position, new Vector3i(Stage.StageWidth, Stage.StageHeight, _hud.Width),
-            Settings.CameraAngle, Settings.CameraZoom);
+            Settings.CameraAngle, Settings.CameraZoom, Settings.CenterPlayer);
 
         _userInput.Update(gameTime, _camera);
         _chatLayer.Update(gameTime, _camera);

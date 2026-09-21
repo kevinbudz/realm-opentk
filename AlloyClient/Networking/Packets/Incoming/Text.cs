@@ -35,6 +35,11 @@ public class Text : IncomingPacket<Text> {
     public override void Handle() {
         ChatBox.AddChatLine.Dispatch(new ChatBoxLineData(Main.GetTime(), Name, NumStars, Recipient, Txt));
 
+        // Flash parity (Parameters textBubbles): chat lines always print,
+        // but the overhead speech bubble honors the option.
+        if (!Settings.TextBubbles)
+            return;
+
         if (Map.Entities.TryGetValue(ObjectId, out var en)) {
             ChatLayer.QueueSpeech(new SpeechData(en, Txt, Recipient));
         }

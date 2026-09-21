@@ -74,6 +74,10 @@ internal static class ConditionIconTests {
 
         var hadSpeedy = ConditionEffects.EffectIcons.TryGetValue(ConditionEffect.Speedy, out var prevSpeedy);
         var hadDamaging = ConditionEffects.EffectIcons.TryGetValue(ConditionEffect.Damaging, out var prevDamaging);
+        // Icon pitch is measured along world X, so pin the camera like
+        // ProjectileRotationTests does instead of reading the live default.
+        var prevCamera = Settings.CameraAngle.Value;
+        Settings.CameraAngle.Set(0f);
         try {
             ConditionEffects.EffectIcons[ConditionEffect.Speedy] = [new Vector4(0, 0, 1, 1)];
             ConditionEffects.EffectIcons[ConditionEffect.Damaging] = [new Vector4(1, 0, 1, 1)];
@@ -95,6 +99,7 @@ internal static class ConditionIconTests {
             Equal(parent.Position.X, (x0 + x1) * 0.5f, 0.0001f);
             Equal(parent.Position.Y + yOffset, targets[0].Position.Y, 0.0001f);
         } finally {
+            Settings.CameraAngle.Set(prevCamera);
             if (hadSpeedy) ConditionEffects.EffectIcons[ConditionEffect.Speedy] = prevSpeedy!;
             else ConditionEffects.EffectIcons.Remove(ConditionEffect.Speedy);
             if (hadDamaging) ConditionEffects.EffectIcons[ConditionEffect.Damaging] = prevDamaging!;

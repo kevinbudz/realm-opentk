@@ -139,6 +139,12 @@ public sealed class ItemTile : Sprite {
     }
 
     private void UpdateTierTag() {
+        // Flash parity (Parameters showTierTag): the tile tag honors the option.
+        if (!Settings.ShowTierTag) {
+            _tierText.Visible = false;
+            return;
+        }
+
         var tag = ItemDesc == null ? null : EquipmentTooltipBuilder.GetTierTag(ItemDesc);
         if (tag == null) {
             _tierText.Visible = false;

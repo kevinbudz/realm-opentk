@@ -32,6 +32,11 @@ public class AllyShoot : IncomingPacket<AllyShoot> {
     }
 
     public override void Handle() {
+        // Flash parity (Parameters allyShots): ally shots are visuals only
+        // and skipped entirely while the option is off.
+        if (!Settings.AllyInfo || !Settings.AllyShots)
+            return;
+
         //Other players' shots are visuals only, like the Flash client:
         //they fly with fake local ids and never report hits, since the
         //server only knows the shooter's own bullet ids.

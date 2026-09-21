@@ -164,7 +164,10 @@ public sealed class Projectile : IResettable { // TODO: make struct
         var c = MathF.Cos(-_rotation);
         var jitter = (_key.Key * 0.00001f) % 0.01f;
         var sort = 0.5f + 0.4f * (_position.X * matrix.M12 + _position.Y * matrix.M22 + matrix.M42) + jitter;
-        return new VertexObject(new Vector3(_position, 0.5f), _texture.UV.ToVector4(), _texture.Scale, new Vector4(s, c, _size, -1f), ExtraData.NewShadedObject(sort, 1f), Color.Black);
+        // Player Alpha option: shots owned by other players fade with the
+        // slider; the local player's own shots and enemy shots stay opaque.
+        var alpha = Settings.GetOtherPlayerAlpha(_ownedByLocalPlayer || _damagePlayers);
+        return new VertexObject(new Vector3(_position, 0.5f), _texture.UV.ToVector4(), _texture.Scale, new Vector4(s, c, _size, -1f), ExtraData.NewShadedObject(sort, alpha), Color.Black);
     }
 
     public ShadowData DrawShadow() => new (_position, 0.5f, Color.Black);

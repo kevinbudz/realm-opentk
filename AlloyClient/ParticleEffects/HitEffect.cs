@@ -16,9 +16,7 @@ public class HitEffect : ParticleEffect
 
     private readonly Vector4 _color;
     private int _count;
-    private double _lastUpdate = -1;
-
-    private double _lifeTime = 2000;
+    private bool _spawned;
 
     public HitEffect(Entity entity, uint color) {
         _parent = entity;
@@ -27,40 +25,48 @@ public class HitEffect : ParticleEffect
 
     public override bool Update(double time, double dt)
     {
-        var count = 1;
-        var start = _count;
-        
-        for (var i = start; i < _count + count; i++)
+        // Flash HitEffect.update is one-shot: it emits all 10 particles at
+        // once, each with its own 200 + random * 100ms lifetime, then dies.
+        if (!_spawned)
         {
-            if (_count == Buffer) break;
+            _spawned = true;
 
-            var dx = (float)(Random.Shared.NextDouble() * 2 - 1);
-            var dy = (float)(Random.Shared.NextDouble() * 2 - 1);
+            for (; _count < Buffer; _count++)
+            {
+                var dx = (float)(Random.Shared.NextDouble() - 0.5) * 0.4f;
+                var dy = (float)(Random.Shared.NextDouble() - 0.5) * 0.4f;
 
-            _data[_count] = new HitParticle(dx, dy);
-            _particles[_count] = new ParticleData(new Vector3(_parent.Position.X, _parent.Position.Y, 0.5f), _color);
-
-            _count++;
-        }
-        
-        _lifeTime -= dt;
-        if (_lifeTime <= 0) {
-            return false;
+                _data[_count] = new HitParticle(dx, dy, 200 + Random.Shared.NextDouble() * 100);
+                _particles[_count] = new ParticleData(new Vector3(_parent.Position.X, _parent.Position.Y, 0.5f), _color);
+            }
         }
 
         for (var i = _count - 1; i >= 0; i--)
         {
             ref var data = ref _data[i];
+
+            data.TimeLeft -= dt;
+            if (data.TimeLeft <= 0)
+            {
+                _count--;
+                _data[i] = _data[_count];
+                _particles[i] = _particles[_count];
+                continue;
+            }
+
             ref var particle = ref _particles[i];
 
-            particle.Position.X += data.X * (float)(dt * 0.004);
-            particle.Position.Y += data.Y * (float)(dt * 0.004);
+            particle.Position.X += data.X * (float)(dt * 0.008);
+            particle.Position.Y += data.Y * (float)(dt * 0.008);
 
             particle.Color = _color;
         }
-        
+
+        if (_count == 0) {
+            return false;
+        }
+
         Map.AddParticles(_particles, _count);
-        _lastUpdate = time;
 
         return true;
     }

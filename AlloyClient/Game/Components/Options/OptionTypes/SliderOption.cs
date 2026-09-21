@@ -6,57 +6,50 @@ using OpenTK.Mathematics;
 namespace AlloyClient.Game.Components.Options.OptionTypes;
 
 public class SliderOption : Option {
-    private const int BarWidth = 80;
-    private const int BarHeight = 32;
-    private const int TrackX = 6;
-    private const int TrackWidth = BarWidth - TrackX * 2;
-    private const int TrackHeight = 2;
-    private const int HandleWidth = 4;
-    private const int HandleHeight = 11;
+    private const int SliderHeight = 32;
+    private const int BarX = 170;
+    private const int BarWidth = 300;
+    private const int TrackX = BarX + 8;
+    private const int TrackWidth = BarWidth - 16;
+    private const int TrackHeight = 6;
+    private const int HandleWidth = 10;
+    private const int HandleHeight = 22;
+    private const int PercentX = BarX + BarWidth + 16;
 
     private readonly ValueSetting<float> _setting;
     private readonly Action<float> _sliderCallback;
-    private readonly CutEdgeRect _background;
     private readonly ColorRect _fill;
     private readonly ColorRect _handle;
+    private readonly SimpleText _percent;
     private bool _dragging;
 
-    public SliderOption(ValueSetting<float> setting, string text, Action<float> sliderCallback) : base(setting, text, null) {
+    public SliderOption(ValueSetting<float> setting, string text, Action<float> sliderCallback) : base(setting, null, null) {
         _setting = setting;
         _sliderCallback = sliderCallback;
 
-        var outline = new CutEdgeRect(new CutEdgeConfig {
-            Width = BarWidth,
-            Height = BarHeight,
-            CutX = 5,
-            CutY = 5,
-            Color = 0x5A5A5A
-        });
-        AddChild(outline);
+        SetHitboxType(CollisionType.Custom);
 
-        _background = new CutEdgeRect(new CutEdgeConfig {
-            X = 2,
-            Y = 2,
-            Width = BarWidth - 4,
-            Height = BarHeight - 4,
-            CutX = 4,
-            CutY = 4,
-            Color = 0x3A3A3A
+        var title = new SimpleText(new TextConfig {
+            Text = text,
+            FontSize = 18,
+            OutlineThickness = 2,
+            Color = 0xB3B3B3,
+            Y = (SliderHeight - 18) / 2 - 2
         });
-        AddChild(_background);
+        AddChild(title);
 
         var track = new ColorRect(new ColorRectConfig {
             X = TrackX,
-            Y = BarHeight / 2 - TrackHeight / 2,
+            Y = SliderHeight / 2 - TrackHeight / 2,
             Width = TrackWidth,
             Height = TrackHeight,
-            Color = 0x1F1F1F
+            Color = 0x5A5A5A
         });
         AddChild(track);
 
         _fill = new ColorRect(new ColorRectConfig {
             X = TrackX,
-            Y = BarHeight / 2 - TrackHeight / 2,
+            Y = SliderHeight / 2 - TrackHeight / 2,
             Width = 1,
             Height = TrackHeight,
             Color = 0xB3B3B3
@@ -64,12 +57,23 @@ public class SliderOption : Option {
         AddChild(_fill);
 
         _handle = new ColorRect(new ColorRectConfig {
-            Y = BarHeight / 2 - HandleHeight / 2,
+            Y = SliderHeight / 2 - HandleHeight / 2,
             Width = HandleWidth,
             Height = HandleHeight,
             Color = 0xFFFFFF
         });
         AddChild(_handle);
+
+        _percent = new SimpleText(new TextConfig {
+            Text = "100%",
+            FontSize = 14,
+            FontType = FontType.Bold,
+            OutlineThickness = 2,
+            Color = 0xFFFFFF,
+            X = PercentX,
+            Y = (SliderHeight - 14) / 2 - 2
+        });
+        AddChild(_percent);
 
         MouseEnabled = true;
         AddEventListener(MouseEvent.LeftDown, OnLeftDown);
@@ -81,6 +85,10 @@ public class SliderOption : Option {
         Refresh();
     }
 
+    protected override bool CustomHitbox(Vector2i pos) {
+        return pos.X >= BarX && pos.X <= BarX + BarWidth && pos.Y >= 0 && pos.Y <= SliderHeight;
+    }
+
     public override void Refresh() {
         SetVisualValue(_setting.Value);
     }
@@ -89,7 +97,6 @@ public class SliderOption : Option {
         _disabled = val;
         MouseEnabled = !val;
         Alpha = val ? 0.45f : 1f;
-        DescText?.SetColor(val ? 0x666666u : 0xB3B3B3u);
     }
 
     private void OnLeftDown(MouseEvent args) {
@@ -134,17 +141,18 @@ public class SliderOption : Option {
         var filledWidth = Math.Max(1, (int)MathF.Round(TrackWidth * clamped));
         _fill.Width = filledWidth;
         _handle.X = TrackX + filledWidth - _handle.Width / 2;
+        _percent.SetText($"{(int)MathF.Round(clamped * 100)}%");
     }
 
     private void OnMouseOver() {
         if (!_disabled) {
-            _background.SetColor(0x555555);
+            _fill.SetColor(0xFFFFFF);
         }
     }
 
     private void OnMouseOut() {
         if (!_disabled) {
-            _background.SetColor(0x3A3A3A);
+            _fill.SetColor(0xB3B3B3);
         }
     }
 }

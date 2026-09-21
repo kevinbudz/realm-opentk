@@ -308,21 +308,25 @@ public static class Map {
 
         #region Shadows
 
-        Render.GpuShadows.Begin();
-        Render.StartDrawShadow();
+        // Flash parity (Parameters drawShadows): the whole shadow pass is
+        // skipped while the option is off.
+        if (Settings.DrawShadows) {
+            Render.GpuShadows.Begin();
+            Render.StartDrawShadow();
 
-        foreach (var type in EntityStorage[ModelType.PbObject]) {
-            if (type.Visible && type.HasShadow) {
-                type.DrawShadow();
+            foreach (var type in EntityStorage[ModelType.PbObject]) {
+                if (type.Visible && type.HasShadow) {
+                    type.DrawShadow();
+                }
             }
-        }
 
-        foreach (var projectile in VisibleProjectiles) {
-            Render.DrawShadow(projectile.DrawShadow());
-        }
+            foreach (var projectile in VisibleProjectiles) {
+                Render.DrawShadow(projectile.DrawShadow());
+            }
 
-        Render.EndShadowDraw();
-        Render.GpuShadows.End();
+            Render.EndShadowDraw();
+            Render.GpuShadows.End();
+        }
 
         #endregion
 

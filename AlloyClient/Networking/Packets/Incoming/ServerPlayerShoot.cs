@@ -66,6 +66,11 @@ public class ServerPlayerShoot : IncomingPacket<ServerPlayerShoot> {
             Client.QueuePacket(ack);
         }
 
+        // Flash parity (Parameters allyShots): foreign volleys render only
+        // while the option is on; owned volleys still ack above.
+        if (!Settings.ShouldShowAllyShot(owned))
+            return;
+
         if (!Map.Entities.TryGetValue(OwnerId, out var owner))
             return;
 

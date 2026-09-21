@@ -22,10 +22,14 @@ internal static class Program
         Run("Character selection and news data", CharacterSelectionTests.Run);
         Run("Server condition mask translation", ConditionMaskTests.Run);
         Run("Condition icons match Flash", ConditionIconTests.Run);
+        Run("Scrollbar arrows and track match Flash", ScrollbarTests.Run);
+        Run("Divider spans the full options row", DividerTests.Run);
         Run("Equipment tooltip parity", EquipmentTooltipTests.Run);
         Run("Tooltip follow-mouse placement", TooltipPositionTests.Run);
         Run("Game-server packet wire format", PacketWireTests.Run);
         Run("Space uses the slot-1 ability", AbilityTests.Run);
+        Run("Flash settings parity", FlashSettingsParityTests.Run);
+        Run("Sound sliders unmute their channel", SoundVolumeTests.Run);
         Run("ShowEffect ability visuals match Flash", ShowEffectTests.Run);
         Run("Detached drag start is safe", SpriteDragTests.Run);
         Run("Menu buttons share the ribbon center", MenuBarAlignmentTests.Run);
