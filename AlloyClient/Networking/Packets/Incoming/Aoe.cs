@@ -42,8 +42,20 @@ public class Aoe : IncomingPacket<Aoe> {
             var dx = player.Position.X - Pos.X;
             var dy = player.Position.Y - Pos.Y;
             if (dx * dx + dy * dy < Radius * Radius) {
+                // Flash parity (GameServerConnection.onAoe +
+                // GameObject.damageWithDefense): AoE numbers subtract defense
+                // too (never armor-piercing). Zero shows no text.
+                var predicted = Entity.DamageWithDefense(Damage, player.Defense, false, player);
+                // Flash parity (onAoe effects): the lone effect byte applies
+                // even when defense floors the number to zero.
+                CharacterStatusText.ApplyDamageEffect(player, Effect);
                 Map.AddParticleEffect(new HitEffect(player, (uint)Color));
-                NotificationLayer.AddStatusText(player, $"-{Damage}", 0xFF0000, 1000, 0);
+                if (predicted > 0) {
+                    var pierced = player.HasConditionEffect(ConditionEffect.ArmorBroken)
+                        || CharacterStatusText.IsArmorBrokenEffect(Effect);
+                    var color = pierced ? CharacterStatusText.PiercedColor : CharacterStatusText.NormalColor;
+                    NotificationLayer.AddStatusText(player, $"-{predicted}", color, 1000, 0, true);
+                }
             }
         }
 

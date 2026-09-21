@@ -35,8 +35,12 @@ internal static class Program
         Run("Menu buttons share the ribbon center", MenuBarAlignmentTests.Run);
         Run("HP bars keep world size across zoom", HpBarScaleTests.Run);
         Run("Sinking and HP bar match Flash", SinkParityTests.Run);
+        Run("Move speed scales with the Speed stat", MoveSpeedParityTests.Run);
+        Run("Damaging ground hurts like Flash", GroundDamageParityTests.Run);
+        Run("Damage text matches Flash", DamageTextParityTests.Run);
         Run("Shop items match Flash", ShopParityTests.Run);
         Run("Wrapped text fits its field", SimpleTextWrapTests.Run);
+        Run("HUD chat lines match Flash", ChatParityTests.Run);
         Run("Portal panels match Flash", PortalParityTests.Run);
         Run("Portal transfer opens a fresh handshake", ReconnectTransferTests.Run);
         Run("Portal world names match Flash", PortalNameTextTests.Run);

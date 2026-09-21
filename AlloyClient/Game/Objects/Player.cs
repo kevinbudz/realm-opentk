@@ -6,8 +6,10 @@ using AlloyClient.Networking;
 using AlloyClient.Networking.Enums;
 using AlloyClient.Networking.Packets.Outgoing;
 using AlloyClient.Networking.Structs.DataObjects;
+using AlloyClient.ParticleEffects;
 using AlloyClient.Rendering;
 using AlloyClient.Rendering.Types;
+using AlloyClient.Ui.Character;
 using AlloyClient.Utils;
 using Alloy.Common.Structs;
 using Alloy.Engine;
@@ -682,18 +684,30 @@ public class Player : Entity {
     }
 
     private float GetMoveSpeed() {
-        if (HasConditionEffect(ConditionEffect.Slowed)) {
-            return MinMoveSpeed * MovementMultiplier;
+        // The Speed stat arrives combined (base + boost, like Flash speed_);
+        // Focused caps it the same way for everyone.
+        var speed = Focused ? FocusedSpeed : Speed;
+        return ComputeMoveSpeed(speed,
+            HasConditionEffect(ConditionEffect.Slowed),
+            HasConditionEffect(ConditionEffect.Speedy) || HasConditionEffect(ConditionEffect.NinjaSpeedy),
+            MovementMultiplier);
+    }
+
+    // Flash parity (Player.getMoveSpeed): pure for testability. Speed 0 walks
+    // at MinMoveSpeed, 75 at MaxMoveSpeed, scaled by the ground multiplier;
+    // Slowed pins to the minimum and Speedy multiplies by 1.5.
+    public static float ComputeMoveSpeed(int speed, bool slowed, bool speedy, float multiplier) {
+        if (slowed) {
+            return MinMoveSpeed * multiplier;
         }
 
-        var speed = Focused ? FocusedSpeed : Speed;
-        var moveSpeed = MinMoveSpeed + speed / 75 * (MaxMoveSpeed - MinMoveSpeed);
+        var moveSpeed = MinMoveSpeed + speed / 75f * (MaxMoveSpeed - MinMoveSpeed);
 
-        if (HasConditionEffect(ConditionEffect.Speedy) || HasConditionEffect(ConditionEffect.NinjaSpeedy)) {
+        if (speedy) {
             moveSpeed *= 1.5f;
         }
 
-        return moveSpeed * MovementMultiplier;
+        return moveSpeed * multiplier;
     }
 
     private static bool IsFullOccupy(float x, float y) {
@@ -746,5 +760,28 @@ public class Player : Entity {
             SinkLevel = 0;
             MovementMultiplier = tile.GroundProperties.Speed;
         }
+
+        // Flash parity (Player.onMove): immediate local feedback for damaging
+        // ground (Lava, etc.), like Flash's damage() call. HP itself stays
+        // server-authoritative (Damage packet + Hp stats); this only shows
+        // the hit and never touches Hp.
+        var covered = tile.OccupiedObject?.Properties?.ProtectFromGroundDamage == true;
+        if (TakesGroundDamage(tile.GroundProperties.MinDamage, tile.GroundProperties.MaxDamage,
+                HasConditionEffect(ConditionEffect.Invincible), covered)) {
+            var min = Math.Min(tile.GroundProperties.MinDamage, tile.GroundProperties.MaxDamage);
+            var max = Math.Max(tile.GroundProperties.MinDamage, tile.GroundProperties.MaxDamage);
+            var amount = Random.Shared.Next(min, max + 1);
+            Map.AddParticleEffect(new HitEffect(this, 0xFF0000));
+            if (amount > 0) {
+                var color = HasConditionEffect(ConditionEffect.ArmorBroken)
+                    ? CharacterStatusText.PiercedColor : CharacterStatusText.NormalColor;
+                NotificationLayer.AddStatusText(this, $"-{amount}", color, 1000, 0, true);
+            }
+        }
     }
+
+    // Flash parity (Player.onMove ground branch): damaging ground hurts
+    // unless invincible or standing on a ProtectFromGroundDamage cover.
+    public static bool TakesGroundDamage(int minDamage, int maxDamage, bool invincible, bool covered) =>
+        (minDamage > 0 || maxDamage > 0) && !invincible && !covered;
 }

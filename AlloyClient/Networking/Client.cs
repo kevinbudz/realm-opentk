@@ -340,6 +340,15 @@ public static class Client {
             if (pkt.PacketId == PacketId.Unknown)
                 return;
 
+            //Handshake window (Flash parity: nothing emits until joined):
+            //between Escape/ReconnectTo and MapInfo, stale simulation
+            //(old projectiles, autofire) can still queue hits and shoots.
+            //Those would land on the new socket before Load, where the
+            //server has no Player yet. Mute everything but the handshake.
+            if (IsReconnecting && pkt.PacketId != PacketId.Hello &&
+                pkt.PacketId != PacketId.Load && pkt.PacketId != PacketId.Create)
+                return;
+
             var sink = OutgoingSink;
             if (sink != null) {
                 sink(pkt);

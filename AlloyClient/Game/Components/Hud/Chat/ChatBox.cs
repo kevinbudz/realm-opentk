@@ -12,7 +12,9 @@ namespace AlloyClient.Game.Components.Hud.Chat;
 public class ChatBox : Sprite {
     public const int MaxWidth = Settings.DefaultScreenWidth / 2;
     private const int MaxHeight = Settings.DefaultScreenHeight / 2 - 2;
-    private const int MaxLines = 7;
+    // Flash TextBox.as: 10 visible lines, scrolled 3 at a time.
+    internal const int MaxLines = 10;
+    internal const int LineScroll = 3;
     private const int LinePadding = 4;
 
     public readonly static SingleSignal<ChatBoxLineData> AddChatLine = new();
@@ -47,11 +49,12 @@ public class ChatBox : Sprite {
         
         _chatInput = new TextInput(new InputConfig {
             Y = MaxHeight,
-            FontSize = 18,
+            FontSize = ChatBoxLine.FontSize,
             FontType = FontType.Bold,
             OutlineThickness = 3,
             ClickToActivate = true,
             Width = MaxWidth,
+            MaxCharacters = 128,
             OnFocus = FocusTextInput,
             OnUnfocus = UnfocusTextInput
         });
@@ -80,11 +83,11 @@ public class ChatBox : Sprite {
 
     private void OnPageUp() {
         if (_showMax) {
-            _lineOffset = Math.Max(0,Math.Min(_lines.Count - MaxLines ,_lineOffset + MaxLines));
+            _lineOffset = Math.Max(0,Math.Min(_lines.Count - MaxLines ,_lineOffset + LineScroll));
         } else {
             _showMax = true;
         }
-        
+
         Refresh();
     }
 
@@ -92,9 +95,9 @@ public class ChatBox : Sprite {
         if (_lineOffset == 0) {
             _showMax = false;
         } else {
-            _lineOffset = Math.Max(0, _lineOffset - MaxLines);
+            _lineOffset = Math.Max(0, _lineOffset - LineScroll);
         }
-        
+
         Refresh();
     }
 
@@ -119,7 +122,7 @@ public class ChatBox : Sprite {
             }
                 
             var sprite = line.Sprite;
-            sprite.X = 3;
+            sprite.X = 2;
             sprite.Y = yPos -= sprite.Height + LinePadding;
 
             _chatContainer.AddChild(line.Sprite);

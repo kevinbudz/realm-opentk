@@ -43,14 +43,28 @@ public unsafe struct ConditionEffectBucket {
 
     public void SetBucket(int bucketId, int bucketValue) {
         _buckets[bucketId] = bucketValue;
-        
+        RecountIcons();
+    }
+
+    // Flash parity (GameObject.damage immediate apply): Damage/Aoe packets
+    // carry server effect ids that re-sync via stats a tick later. Setting
+    // the bit now keeps pierce/color checks and icons correct until then.
+    public void AddConditionEffect(ConditionEffect effect) {
+        var bucket = (EffectType) effect / ConditionEffects.MaxBucketSize;
+        if (bucket < 0 || bucket >= ConditionEffects.MaxEffectBuckets)
+            return;
+        _buckets[bucket] |= (BucketType) (1 << ((EffectType) effect % ConditionEffects.MaxBucketSize));
+        RecountIcons();
+    }
+
+    private void RecountIcons() {
         var count = 0;
 
         for (var i = 0; i < ConditionEffects.MaxEffectBuckets; i++) {
             count += ConditionEffects.CountIcons(i, _buckets[i]);
         }
 
-        TotalIcons =  count;
+        TotalIcons = count;
     }
 }
 
@@ -116,6 +130,29 @@ public static class ConditionEffects {
         ConditionEffect.Invulnerable, ConditionEffect.Armored, ConditionEffect.ArmorBroken,
         ConditionEffect.Hexed,
     ];
+
+    // Single server effect id (Damage/Aoe effect bytes: realm-server
+    // ConditionEffectIndex Nothing = 0 .. Hexed = 25) to this client's
+    // Dead-shifted enum. Nothing (0) and ids past Hexed (betterskillys-only
+    // effects like GroundDamage/Exposed/Curse, which this server never
+    // sends) map to nothing and are dropped by the caller.
+    public static bool TryMapServerEffect(byte serverEffectId, out ConditionEffect effect) {
+        if (serverEffectId == 0 || serverEffectId > ServerBitToEffect.Length) {
+            effect = ConditionEffect.None;
+            return false;
+        }
+        effect = ServerBitToEffect[serverEffectId - 1];
+        return true;
+    }
+
+    private readonly static Dictionary<ConditionEffect, string> EffectDisplayNames =
+        EffectTable.ToDictionary(e => e.Index, e => e.Name);
+
+    // Flash parity (GameObject.damage ce.name_ text): the red condition name
+    // shown above the target. Built from EffectTable so it never needs atlas
+    // Init, keeping it usable from packet handlers and tests.
+    public static string GetEffectName(ConditionEffect effect) =>
+        EffectDisplayNames.TryGetValue(effect, out var name) ? name : effect.ToString();
 
     public static BucketType TranslateServerMask(BucketType serverMask) {
         var clientMask = (BucketType)0;

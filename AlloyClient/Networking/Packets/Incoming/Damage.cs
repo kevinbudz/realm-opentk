@@ -46,11 +46,31 @@ public class Damage : IncomingPacket<Damage> {
             return;
 
         //Authoritative hit display, mirroring the Flash client's
-        //target.damage(): the server already applied this; conditions
-        //re-sync through NewTick/Update stats.
+        //target.damage(): the server already applied this; stats re-sync
+        //wholesale through NewTick/Update a tick later.
         target.Hp = Math.Max(0, target.Hp - DamageAmount);
+        // Flash parity (damage effects loop): server ids Nothing = 0 ..
+        // Hexed = 25 only; betterskillys-only ids never arrive and are
+        // dropped inside. Queued before the number, like Flash.
+        CharacterStatusText.ApplyDamageEffects(target, Effects, EffectCount);
+        var pierced = target.HasConditionEffect(ConditionEffect.ArmorBroken) || HasArmorBrokenEffect();
         Map.AddParticleEffect(new HitEffect(target, 0xFF0000));
-        NotificationLayer.AddStatusText(target, $"-{DamageAmount}", 0xFF0000, 1000, 0);
+        // Flash parity (damageAmount > 0): invulnerable zeroes show the
+        // condition text but no number.
+        if (DamageAmount > 0) {
+            var color = pierced ? CharacterStatusText.PiercedColor : CharacterStatusText.NormalColor;
+            NotificationLayer.AddStatusText(target, $"-{DamageAmount}", color, 1000, 0, true);
+        }
+    }
+
+    // Flash parity (damage pierced check): the tick carrying armor break
+    // can arrive with the damage itself, before the target's live state
+    // re-syncs, so the packet's own effect list counts too.
+    private bool HasArmorBrokenEffect() {
+        for (var i = 0; i < EffectCount; i++)
+            if (CharacterStatusText.IsArmorBrokenEffect(Effects[i]))
+                return true;
+        return false;
     }
 
     public override string ToString() {

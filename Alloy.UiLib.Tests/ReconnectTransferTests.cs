@@ -13,6 +13,7 @@ internal static class ReconnectTransferTests {
     public static void Run() {
         ReconnectOpensFreshHandshake();
         StaleDisconnectKeepsSession();
+        HandshakeMutesStaleGamePackets();
     }
 
     private static void ReconnectOpensFreshHandshake() {
@@ -84,6 +85,40 @@ internal static class ReconnectTransferTests {
             Map.DisplayName = previousDisplay;
             Map.Entities.Clear();
             Map.EntityStorage.Clear();
+        }
+    }
+
+    // Between Escape/ReconnectTo and MapInfo the old world's simulation
+    // can still fire (stale projectiles, autofire). Those packets would
+    // land on the new socket before Load, where the server has no Player
+    // yet (server NRE -> nexus keybinds disconnecting instead of
+    // transferring). Only the handshake itself may emit mid-transfer.
+    private static void HandshakeMutesStaleGamePackets() {
+        var previousReconnecting = Client.IsReconnecting;
+        var previousOutgoing = Client.OutgoingSink;
+        var seen = new List<string>();
+        Client.OutgoingSink = pkt => seen.Add(pkt.GetType().Name);
+        try {
+            Client.IsReconnecting = true;
+            Client.QueuePacket(PlayerHit.CreatePacket());
+            Client.QueuePacket(PlayerShoot.CreatePacket());
+            Client.QueuePacket(EnemyHit.CreatePacket());
+            Client.QueuePacket(Move.CreatePacket());
+            Client.QueuePacket(Hello.CreatePacket());
+            Client.QueuePacket(Load.CreatePacket());
+            Client.QueuePacket(Create.CreatePacket());
+            Equal(3, seen.Count);
+            Equal("Hello", seen[0]);
+            Equal("Load", seen[1]);
+            Equal("Create", seen[2]);
+
+            Client.IsReconnecting = false;
+            Client.QueuePacket(PlayerHit.CreatePacket());
+            Client.QueuePacket(Move.CreatePacket());
+            Equal(5, seen.Count);
+        } finally {
+            Client.OutgoingSink = previousOutgoing;
+            Client.IsReconnecting = previousReconnecting;
         }
     }
 

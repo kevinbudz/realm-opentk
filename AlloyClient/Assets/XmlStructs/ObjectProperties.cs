@@ -38,6 +38,7 @@ public class ObjectProperties {
     public readonly bool DrawOnGround;
 
     public readonly bool Flying;
+    public readonly bool ProtectFromGroundDamage;
     public readonly bool ProtectFromSink;
 
     public readonly int RealSize;
@@ -55,6 +56,8 @@ public class ObjectProperties {
     public readonly bool LockedPortal;
     public readonly bool NexusPortal;
     
+    public readonly int Defense;
+
     public readonly List<int> SlotTypes;
     public readonly List<ushort?> Equipment;
 
@@ -96,7 +99,10 @@ public class ObjectProperties {
         DrawOnGround = e.GetValue<bool>("DrawOnGround");
 
         Flying = e.HasElement("Flying");
+        ProtectFromGroundDamage = e.HasElement("ProtectFromGroundDamage");
         ProtectFromSink = e.HasElement("ProtectFromSink");
+
+        Defense = e.GetValue<int>("Defense");
 
         RealSize = e.GetValue<int>("RealSize", -1);
         MinSize = e.GetValue<int>("MinSize");

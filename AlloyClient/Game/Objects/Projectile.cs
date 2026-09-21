@@ -76,6 +76,7 @@ public sealed class Projectile : IResettable { // TODO: make struct
     private float _angleCorrection; // readonly
     private float _rotationSpeed; // readonly
     private bool _multiHit; // readonly
+    private bool _armorPiercing; // readonly
     private bool _passesCover; // readonly
     private bool _noRotation; // readonly
     private bool _hasTrail; // readonly
@@ -104,6 +105,7 @@ public sealed class Projectile : IResettable { // TODO: make struct
         _angleCorrection = objDesc.AngleCorrection * MathHelper.PiOver4;
         _rotationSpeed = objDesc.Rotation;
         _multiHit = projDesc.MultiHit;
+        _armorPiercing = projDesc.ArmorPiercing;
         _passesCover = projDesc.PassesCover;
         _noRotation = projDesc.NoRotation;
         _hasTrail = projDesc.HasParticleTrail;
@@ -222,8 +224,15 @@ public sealed class Projectile : IResettable { // TODO: make struct
                 return false;
             }
 
+            // Flash parity (Projectile.update + GameObject.damageWithDefense):
+            // the number above the player is the defense-adjusted hit, not
+            // the raw bullet damage. Zero (invulnerable) shows no text.
+            var predicted = Entity.DamageWithDefense(_damage, target.Defense, _armorPiercing, target);
             Map.AddParticleEffect(new HitEffect(target, 0xFF0000));
-            NotificationLayer.AddStatusText(target, $"-{_damage}", 0xFF0000, 1000, 0);
+            if (predicted > 0) {
+                var hitColor = CharacterStatusText.ResolveDamageColor(target, _armorPiercing);
+                NotificationLayer.AddStatusText(target, $"-{predicted}", hitColor, 1000, 0, true);
+            }
 
             var hit = PlayerHit.CreatePacket();
             hit.BulletId = _key.Id;
@@ -253,8 +262,13 @@ public sealed class Projectile : IResettable { // TODO: make struct
             return false;
         }
 
+        // Flash parity: enemy numbers also subtract defense.
+        var predictedEnemy = Entity.DamageWithDefense(_damage, enemy.Defense, _armorPiercing, enemy);
         Map.AddParticleEffect(new HitEffect(enemy, 0xFF0000));
-        NotificationLayer.AddStatusText(enemy, $"-{_damage}", 0xFF0000, 1000, 0);
+        if (predictedEnemy > 0) {
+            var dmgColor = CharacterStatusText.ResolveDamageColor(enemy, _armorPiercing);
+            NotificationLayer.AddStatusText(enemy, $"-{predictedEnemy}", dmgColor, 1000, 0, true);
+        }
 
         var hit1 = EnemyHit.CreatePacket();
         hit1.Time = Environment.TickCount;

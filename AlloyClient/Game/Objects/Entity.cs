@@ -141,6 +141,34 @@ public class Entity {
         TextureData = ObjectLibrary.TypeToTextureData[type];
         Texture = TextureData.HasAnimationData ? TextureData.AnimatedTextures.FaceRight[0] : TextureData.GetTexture();
         RenderBaseType = GetRenderType(type);
+        // Flash parity (GameObject defense_ = int(objectXML.Defense)):
+        // enemies keep their XML defense; players overwrite this via the
+        // Defense stat (total base + boost) in UpdateStats.
+        if (Properties != null)
+            Defense = Properties.Defense;
+    }
+
+    // Flash parity (GameObject.damageWithDefense + realm-server
+    // GameUtils.GetDefenseDamage): predicted hit numbers must subtract the
+    // target's defense first. Raw projectile/AoE damage above the player is
+    // wrong without this. Pure for testability.
+    public static int DamageWithDefense(int origDamage, int targetDefense, bool armorPiercing, Entity target) =>
+        DamageWithDefense(origDamage, targetDefense, armorPiercing,
+            target?.HasConditionEffect(ConditionEffect.ArmorBroken) == true,
+            target?.HasConditionEffect(ConditionEffect.Armored) == true,
+            target?.HasConditionEffect(ConditionEffect.Invulnerable) == true);
+
+    public static int DamageWithDefense(int origDamage, int targetDefense, bool armorPiercing, bool armorBroken, bool armored, bool invulnerable) {
+        var def = targetDefense;
+        if (armorPiercing || armorBroken)
+            def = 0;
+        else if (armored)
+            def *= 2;
+        var min = origDamage * 3 / 20;
+        var d = Math.Max(min, origDamage - def);
+        if (invulnerable)
+            d = 0;
+        return d;
     }
 
     // Flash parity (Merchant.setMerchandiseType/getTexture): a shopkeeper
@@ -208,6 +236,10 @@ public class Entity {
     }
 
     public bool HasConditionEffect(ConditionEffect effect) => EffectBuckets.HasConditionEffect(effect);
+
+    // Immediate single-effect apply for Damage/Aoe packet effect bytes.
+    // Stats re-sync wholesale via SetBucket a tick later.
+    public void AddConditionEffect(ConditionEffect effect) => EffectBuckets.AddConditionEffect(effect);
 
     public virtual bool Update(double time, double dt) {
         if (Settings.MovementInterpolation) {

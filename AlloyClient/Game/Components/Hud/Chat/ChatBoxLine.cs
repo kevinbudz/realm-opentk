@@ -47,12 +47,19 @@ public class ChatBoxLine : Container {
     private const uint AdminColor = 0xFFFF00;
     private const uint TellColor = 0x00F0FF;
 
-    private const int LineHeight = 18;
+    // Flash TextBoxLine.as / TextBox.as / ElementFormats.as: bold 14pt text,
+    // a 16px minimum line height, and wrapped lines indented by 20px.
+    internal const int FontSize = 14;
+    internal const int MinLineHeight = 16;
+    internal const int Indent = 20;
+    internal const uint SeparatorColor = 0x363636;
 
-    public ChatBoxLine(ChatBoxLineData data) : base(new ContainerConfig { Width = ChatBox.MaxWidth, Height = LineHeight }) {
+    public ChatBoxLine(ChatBoxLineData data) : base(new ContainerConfig { Width = ChatBox.MaxWidth, Height = MinLineHeight }) {
         var x = 0;
 
-        if (TryGetStar(LineHeight, data, out var fameStar)) {
+        if (ShouldShowStar(data.NumStars, data.Recipient, data.ToMe)) {
+            var fameStar = new FameStar(MinLineHeight, data.NumStars);
+            fameStar.Y = 3;
             AddChild(fameStar);
 
             x += fameStar.Width + 2;
@@ -65,33 +72,50 @@ public class ChatBoxLine : Container {
             x += pm.Width;
         }
 
-        if (TryGetName(data, out var name)) {
+        if (TryGetDisplayName(data.Name, data.Recipient, data.ToMe, out var displayName, out var nameColor)) {
+            var name = CreateText($"<{displayName}>", nameColor);
             name.X = x;
             name.Y = 2;
             AddChild(name);
             x += name.Width;
+
+            var separator = CreateText(" ", SeparatorColor);
+            separator.X = x;
+            separator.Y = 2;
+            AddChild(separator);
+            x += separator.Width;
         }
 
-        GetText(data, ChatBox.MaxWidth - x, out var text);
+        var color = GetMessageColor(data.Name, data.Recipient);
+        var text = CreateText(data.Text, color, ChatBox.MaxWidth - x);
 
         text.X = x;
         text.Y = 2;
-        text.OffsetLineWrapBy(-(x - 2));
+        text.OffsetLineWrapBy(Indent - x);
         AddChild(text);
     }
 
-    private static bool TryGetStar(int size, ChatBoxLineData data, out FameStar star) {
-        if (data.NumStars < 0 || data.Recipient != string.Empty && !data.ToMe) {
-            star = null;
+    // Flash TextBoxLine.getTextBlock keeps the rank icon for guild chat and
+    // clears it only for outgoing tells (recipient shown instead of the name).
+    internal static bool ShouldShowStar(int numStars, string recipient, bool toMe) {
+        if (numStars < 0) {
             return false;
         }
 
-        star = new FameStar(size, data.NumStars);
+        if (!toMe && recipient != string.Empty && recipient != GuildChatName) {
+            return false;
+        }
+
         return true;
     }
 
+    // Flash shows the "To: " prefix only on outgoing tells.
+    internal static bool ShouldShowPm(string recipient, bool toMe) {
+        return !toMe && recipient != string.Empty && recipient != GuildChatName;
+    }
+
     private static bool TryGetPm(ChatBoxLineData data, out SimpleText text) {
-        if (data.ToMe || data.Recipient == GuildChatName || data.Recipient == string.Empty) {
+        if (!ShouldShowPm(data.Recipient, data.ToMe)) {
             text = null;
             return false;
         }
@@ -100,72 +124,69 @@ public class ChatBoxLine : Container {
         return true;
     }
 
-    private static bool TryGetName(ChatBoxLineData data, out SimpleText text) {
-        var color = PlayerColor;
+    // Flash TextBoxLine.getTextBlock: system senders show no name; the name
+    // keeps the sender-derived format (player/enemy/admin) for guild and tell
+    // chat, while only the message body takes the guild/tell color.
+    internal static bool TryGetDisplayName(string name, string recipient, bool toMe, out string displayName, out uint color) {
+        color = PlayerColor;
+        displayName = name ?? string.Empty;
 
-        var name = data.Name;
-
-        switch (name) {
+        switch (displayName) {
             case ServerChatName:
             case ClientChatName:
             case ErrorChatName:
             case HelpChatName:
-                text = null;
+                displayName = string.Empty;
                 return false;
         }
 
-        if (name.StartsWith(EnemyNameChar)) {
+        if (displayName.StartsWith(EnemyNameChar)) {
             color = EnemyColor;
-            name = name.Substring(1);
+            displayName = displayName.Substring(1);
         }
-        
-        if (name.StartsWith(AdminNameChar)) {
+
+        if (displayName.StartsWith(AdminNameChar)) {
             color = AdminColor;
-            name = name.Substring(1);
+            displayName = displayName.Substring(1);
         }
 
-        if (data.Recipient == GuildChatName) {
-            color = GuildColor;
-        } else if (data.Recipient != string.Empty) {
-            if (!data.ToMe) {
-                name = data.Recipient;
-            }
+        if (recipient != GuildChatName && recipient != string.Empty && !toMe) {
+            displayName = recipient;
         }
 
-        text = CreateText($"<{name}>  ", color);
         return true;
     }
-    
-    private static void GetText(ChatBoxLineData data, int maxWidth, out SimpleText text) {
+
+    internal static uint GetMessageColor(string name, string recipient) {
         var color = DefaultColor;
 
-        var name = data.Name;
+        var resolved = name ?? string.Empty;
 
-        color = name switch {
+        color = resolved switch {
             ServerChatName => ServerColor,
             ClientChatName => ClientColor,
             ErrorChatName => ErrorColor,
             HelpChatName => HelpColor,
             _ => color
         };
-        
-        if (name.StartsWith(AdminNameChar)) {
+
+        if (resolved.StartsWith(AdminNameChar)) {
             color = AdminColor;
         }
 
-        if (data.Recipient == GuildChatName) {
+        if (recipient == GuildChatName) {
             color = GuildColor;
-        } else if (data.Recipient != string.Empty) {
+        } else if (recipient != string.Empty) {
             color = TellColor;
         }
 
-        text = CreateText(data.Text, color, maxWidth);
+        return color;
     }
 
     private static SimpleText CreateText(string text, uint color, int maxWidth = -1) {
         return new SimpleText(new TextConfig {
             Text = text,
-            FontSize = LineHeight,
+            FontSize = FontSize,
             FontType = FontType.Bold,
             Color = color,
             OutlineThickness = 3,
